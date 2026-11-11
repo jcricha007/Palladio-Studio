@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Palladio Studio</title>
+  <link rel="stylesheet" href="/studio.css">
+  <script type="module" src="/studio.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Palladio Studio home"><span class="mark" aria-hidden="true">◈</span> PALLADIO <span>STUDIO</span></a>
+    <div class="project-title" id="project-title">Property library</div>
+    <button type="button" id="new-property" class="primary">New property</button>
+  </header>
+  <main>
+    <aside class="library panel" aria-label="Property library">
+      <h2>Properties</h2>
+      <div id="properties" class="stack"></div>
+      <button id="duplicate" type="button" disabled>Duplicate property</button>
+      <hr>
+      <h2>Scene</h2>
+      <div id="scene-items" class="stack"></div>
+    </aside>
+    <section class="workspace" aria-label="Property workspace">
+      <div class="viewport">
+        <canvas id="view" aria-label="3D property preview"></canvas>
+        <div id="rain" aria-hidden="true"></div>
+        <div class="view-top">
+          <div role="group" aria-label="Scene view" class="switch">
+            <button type="button" id="design-view" aria-pressed="true">Design</button>
+            <button type="button" id="baseline-view" aria-pressed="false">Original site</button>
+          </div>
+          <button id="frame" type="button">Reset view</button>
+        </div>
+        <div id="empty-state">
+          <h1>Start with a landscape.</h1>
+          <p>Describe the setting for your first property.</p>
+          <button id="empty-create" type="button" class="primary">Create a property</button>
+        </div>
+        <div class="view-bottom">
+          <span id="site-profile"></span>
+          <span id="navigation-hint">Drag to orbit · Shift + drag to pan · Scroll to zoom</span>
+        </div>
+      </div>
+      <div class="prompt">
+        <form id="prompt-form">
+          <label for="request">Design prompt</label>
+          <div class="input-row">
+            <input id="request" maxlength="8000" placeholder="Set weather to fog" required>
+            <button type="submit">Preview</button>
+          </div>
+        </form>
+        <div id="proposal" class="proposal" hidden>
+          <span id="proposal-text"></span>
+          <button id="apply-plan" type="button" class="primary">Apply</button>
+          <button id="discard-plan" type="button">Discard</button>
+        </div>
+      </div>
+    </section>
+    <aside class="inspector panel" aria-label="Property inspector">
+      <div id="inspector">
+        <h2>Environment</h2>
+        <form id="environment" class="stack">
+          <label>Weather<select id="weather"></select></label>
+          <label>Time of day<input id="hour" type="time" step="60" required></label>
+          <button type="submit">Update environment</button>
+        </form>
+        <hr>
+        <h2>Elements</h2>
+        <div class="input-row">
+          <select id="add-kind" aria-label="New element type"></select>
+          <button id="add-element" type="button">Add</button>
+        </div>
+        <form id="element" class="stack" hidden>
+          <label>Name<input id="element-name" maxlength="100" required></label>
+          <label>Material<select id="material"></select></label>
+          <fieldset>
+            <legend>Position in metres</legend>
+            <div class="triplet">
+              <label>X<input id="position-x" type="number" step="any" min="-1000" max="1000" required></label>
+              <label>Y<input id="position-y" type="number" step="any" min="-1000" max="1000" required></label>
+              <label>Z<input id="position-z" type="number" step="any" min="-1000" max="1000" required></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Size in metres</legend>
+            <div class="triplet">
+              <label>Width<input id="size-x" type="number" step="any" min="0.05" max="300" required></label>
+              <label>Height<input id="size-y" type="number" step="any" min="0.05" max="300" required></label>
+              <label>Depth<input id="size-z" type="number" step="any" min="0.05" max="300" required></label>
+            </div>
+          </fieldset>
+          <label>Rotation in degrees<input id="yaw" type="number" step="any" min="-360" max="360" required></label>
+          <div class="input-row">
+            <button type="submit" class="primary">Save element</button>
+            <button type="button" id="remove-element">Remove</button>
+          </div>
+        </form>
+        <hr>
+        <h2>History</h2>
+        <label>Revision<select id="history"></select></label>
+        <button id="restore" type="button">Restore revision</button>
+      </div>
+    </aside>
+  </main>
+  <footer id="status" role="status" aria-live="polite"></footer>
+  <dialog id="property-dialog" aria-labelledby="dialog-title">
+    <form id="property-form" class="stack">
+      <h1 id="dialog-title">New property</h1>
+      <label>Name<input id="property-name" placeholder="Ridge House" maxlength="100" required></label>
+      <div id="new-fields" class="stack">
+        <label>Landscape description<textarea id="landscape-brief" maxlength="8000" rows="4" placeholder="A wooded hillside with a clearing in the pines"></textarea></label>
+        <label class="checkbox"><input id="starter" type="checkbox" checked> Include a starter pavilion</label>
+      </div>
+      <p id="dialog-error" role="alert" hidden></p>
+      <div class="input-row">
+        <button type="submit" id="create-submit" class="primary">Create property</button>
+        <button id="close-dialog" type="button">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
