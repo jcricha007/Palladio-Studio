@@ -48,7 +48,7 @@ The preview uses free-flight navigation, basic material colors, and simple sunli
 
 ## Current scope
 
-The 0.1 foundation includes three procedural site profiles, a WebGL orbit viewport, basic box-based architectural elements, material swatches, simple atmosphere controls, project duplication, and revision history. Prompts use a small rule-based adapter that exercises the same validated command interface as the manual tools. The Unreal developer preview opens the same saved properties and commits element moves to the same revision history. Real-world terrain imports, visual references, and local-model planning are later milestones.
+The 0.1 foundation includes three procedural site profiles, a WebGL orbit viewport, basic box-based architectural elements, material swatches, simple atmosphere controls, project duplication, and revision history. Prompts use a small rule-based adapter that exercises the same validated command interface as the manual tools. The Unreal developer preview opens the same saved properties and commits element moves to the same revision history. An optional local Ollama adapter now proposes validated scene edits. Real-world terrain imports, visual references, and autonomous design jobs remain later milestones.
 
 ## Develop
 
@@ -60,7 +60,8 @@ py -m unittest discover -s tests -v
 | --- | --- |
 | `palladio/scene.py` | Procedural site generation, element definitions, and validated scene commands |
 | `palladio/store.py` | Local property library, immutable baselines, and transactional revisions |
-| `palladio/agent.py` | Prompt-to-command preview adapter |
+| `palladio/agent.py` | Built-in deterministic prompt adapter |
+| `palladio/local_agent.py` | Local Ollama transport, planner contract, bounded context and strict proposal validation |
 | `palladio/__main__.py` | Loopback application server and JSON interface |
 | `palladio/web/` | Property workspace, inspector, and WebGL renderer |
 | `palladio/unreal.py` | Scene projection from local metres and Y up into Unreal centimetres and Z up |
@@ -103,3 +104,71 @@ node tests/test_assembly_ui.cjs
 
 The Node check uses a small DOM/viewport test double to check preview state and edit flows.
 It is not a substitute for browser rendering or Windows Unreal acceptance.
+
+## Local agent and in-app model switching
+
+The **Agent** panel keeps **Built-in commands** available without any AI runtime. Choose
+**Local Ollama** to use a separately installed, running Ollama server on this computer.
+Palladio does not install Ollama, download models, send prompts to a hosted API, or store keys.
+Install a chat model yourself using [Ollama's documentation](https://docs.ollama.com/quickstart).
+For a strict offline runtime, disable Ollama cloud features (`OLLAMA_NO_CLOUD=1`) and restart
+Ollama; see [Ollama's FAQ](https://docs.ollama.com/faq). Palladio additionally rejects cloud
+names/remote aliases and requires local weight metadata before sending scene context.
+
+1. Start Palladio normally and open a property. Choose **Local Ollama**, click **Refresh
+   models**, and explicitly choose an installed model. Switch models in the same selector
+   whenever you want; the last local model choice is remembered by this browser.
+2. Select a scene element and try `Make the selected wall 4 metres wide and use oak`, or
+   try `Add a 6 by 8 metre garage at x 15, z 0; leave existing objects alone`.
+3. Click **Preview request**. Read the proposal, inspect its validated commands and temporary
+   scene, then **Apply** or **Discard**. A response with no commands is informational and
+   cannot be applied. Unsupported or invalid plans fail without saving anything.
+4. Confirm Apply advances History once. Restore the previous revision to undo the whole
+   batch. In the separate Unreal viewport, press **R** to load the committed result.
+5. Change provider, model, prompt, selection or property to discard a pending proposal.
+   **Cancel** discards the browser request and prevents a late result from being applied;
+   it does not guarantee the model runtime stops generating immediately.
+
+The connection is fixed to `127.0.0.1:11434`; use `py -m palladio --ollama-port 11435`
+for another local port. There is intentionally no arbitrary remote endpoint field.
+An unavailable runtime leaves manual editing and Built-in commands usable. Only one model
+request runs at a time; retry after the prior request finishes if the app reports busy.
+The transport uses a 120-second socket inactivity timeout, not an absolute job deadline.
+
+### What this increment actually does
+
+A replaceable planner receives the prompt, current revision, selection, environment,
+material/assembly catalogs, and a bounded scene excerpt (up to 40 elements, selected first,
+then nearby). It returns schema-constrained JSON, not executable code. Every command is
+checked against the allowlist and existing scene validators on a private copy. Only explicit
+Apply uses the existing revision-checked transaction. A concurrent edit invalidates the
+proposal rather than overwriting it. Existing-object edits can target only IDs included in
+the supplied excerpt. Full-scene reasoning is not promised; context is character-bounded,
+not token-counted, so a runtime may still truncate an unusually large/non-ASCII request.
+
+Supported commands: add/update/remove simple elements, add the four existing assemblies,
+and change atmosphere. A proposal can contain at most 12 commands. Newly added objects
+cannot be referred to by ID later in the same proposal. Model-generated geometry uses the
+same schematic assets as manual editing, not photorealistic generation. No images, shell
+execution, arbitrary Python, filesystem tools, automatic saves, model installation, autonomous
+jobs, or native Unreal agent panel are included. Browser model selection does not change the
+renderer. A model can still misunderstand intent, so inspect the preview before applying.
+
+No default model is imposed. Gemma/Ministral candidates can be compared after installing
+compatible Ollama models; quality, latency and VRAM alongside Unreal need measurement on the
+Windows workstation. The adapter requests model unloading after each reply (`keep_alive: 0`)
+to avoid keeping switched models resident, at the cost of cold-start latency. That does not
+guarantee a model fits in available VRAM during generation.
+
+Developer checks (no hosted CI required):
+
+```powershell
+py -m unittest discover -s tests -v
+node tests/test_assembly_ui.cjs
+node tests/test_agent_ui.cjs
+```
+
+Agent tests use a fake loopback Ollama server to verify model switching, wire payloads,
+remote-model rejection, malformed output, stale revisions, atomic edits, timeout errors and
+no-save previews. DOM tests cover controls and late-response cancellation. These tests do
+not benchmark real model quality, Windows/Unreal performance, or browser rendering.

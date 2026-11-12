@@ -11,6 +11,132 @@ let busy = false;
 let duplicating = false;
 let viewport;
 let viewportError = "";
+let agentRequest = null;
+let agentGeneration = 0;
+let modelRequest = null;
+let modelGeneration = 0;
+let installedModels = [];
+let agentEndpoint = "http://127.0.0.1:11434";
+
+function agentStatus(message, error = false) {
+  $("agent-status").textContent = message;
+  $("agent-status").dataset.error = String(error);
+}
+
+function rememberedModel(value) {
+  try {
+    if (value !== undefined) localStorage.setItem("palladio.agent.model", value);
+    return localStorage.getItem("palladio.agent.model") || "";
+  } catch { return ""; }
+}
+
+function cancelAgentRequest(message = "") {
+  const active = Boolean(agentRequest);
+  agentGeneration += 1;
+  agentRequest?.abort();
+  agentRequest = null;
+  if (active && message) agentStatus(message);
+  syncControls();
+  return active;
+}
+
+function cancelModelRequest() {
+  modelGeneration += 1;
+  modelRequest?.abort();
+  modelRequest = null;
+}
+
+async function refreshModels() {
+  if (busy || $("agent-provider").value !== "ollama" || modelRequest) return;
+  cancelAgentRequest();
+  showPlan();
+  const generation = ++modelGeneration;
+  const controller = new AbortController();
+  modelRequest = controller;
+  const preferred = $("agent-model").value || rememberedModel();
+  installedModels = [];
+  $("agent-model").replaceChildren(option("", "Checking installed models…"));
+  agentStatus("Connecting to local Ollama…");
+  syncControls();
+  try {
+    const result = await api("/api/agent/models", {}, controller.signal);
+    if (generation !== modelGeneration || $("agent-provider").value !== "ollama") return;
+    if (!Array.isArray(result.models) || result.models.some(item => typeof item.name !== "string")) {
+      throw new Error("Ollama returned an invalid model list.");
+    }
+    installedModels = result.models.map(item => item.name);
+    $("agent-model").replaceChildren(option("", "Choose an installed model"),
+      ...result.models.map(item => option(item.name, item.name)));
+    $("agent-model").value = installedModels.includes(preferred) ? preferred : "";
+    agentStatus(installedModels.length
+      ? `Connected to ${agentEndpoint}. Choose a model, then preview your request.`
+      : "Ollama is connected, but no models are installed. Install a model in Ollama, then Refresh models.");
+  } catch (error) {
+    if (generation !== modelGeneration) return;
+    $("agent-model").replaceChildren(option("", "No models available"));
+    agentStatus(error.message + " Start Ollama locally and Refresh models, or use Built-in commands.", true);
+  } finally {
+    if (generation === modelGeneration) {
+      modelRequest = null;
+      syncControls();
+    }
+  }
+}
+
+function changeAgent() {
+  cancelAgentRequest();
+  cancelModelRequest();
+  showPlan();
+  const local = $("agent-provider").value === "ollama";
+  $("agent-model-label").hidden = !local;
+  $("refresh-models").hidden = !local;
+  $("agent-privacy").hidden = !local;
+  if (local) refreshModels();
+  else agentStatus("Built-in commands use no language model.");
+  syncControls();
+}
+
+async function previewRequest() {
+  if (busy || agentRequest || !project || baselineView) return;
+  const provider = $("agent-provider").value;
+  const model = $("agent-model").value;
+  if (provider === "ollama" && (!model || !installedModels.includes(model))) {
+    agentStatus("Choose an installed model before previewing.", true);
+    return;
+  }
+  showPlan();
+  const generation = ++agentGeneration;
+  const controller = new AbortController();
+  agentRequest = controller;
+  const snapshot = {id: project.id, revision: project.revision, selection: selected,
+    prompt: $("request").value, provider, model};
+  agentStatus(provider === "ollama" ? `Waiting for ${model}… No changes have been saved.` : "Preparing command preview…");
+  syncControls();
+  try {
+    const plan = await api(propertiesPath + "/" + snapshot.id + "/preview", {
+      prompt: snapshot.prompt, selection: snapshot.selection, revision: snapshot.revision,
+      provider, ...(provider === "ollama" ? {model} : {}),
+    }, controller.signal);
+    if (generation !== agentGeneration || project?.id !== snapshot.id ||
+        project?.revision !== snapshot.revision || selected !== snapshot.selection ||
+        $("request").value !== snapshot.prompt || $("agent-provider").value !== provider ||
+        (provider === "ollama" && $("agent-model").value !== model)) return;
+    if (plan.revision !== project.revision) throw new Error("This property changed. Reopen it and preview again.");
+    showPlan(plan);
+    const hasEdits = (plan.commands || [plan.command]).filter(Boolean).length > 0;
+    agentStatus(hasEdits ? "Preview ready. Review every change before Apply. Nothing has been saved." : "Response ready. No scene changes proposed.");
+    status(hasEdits ? "Review the proposed edit." : "No changes were saved.");
+  } catch (error) {
+    if (generation !== agentGeneration) return;
+    agentStatus(error.message, true);
+    status(error.message, true);
+  } finally {
+    if (generation === agentGeneration) {
+      agentRequest = null;
+      syncControls();
+    }
+  }
+}
 
 try {
   viewport = new Viewport($("view"), id => {
@@ -21,12 +147,13 @@ try {
   viewportError = "3D viewport unavailable. You can still edit the property in the inspector.";
 }
 
-async function api(path, data) {
+async function api(path, data, signal) {
   const options = data === undefined ? {} : {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify(data),
   };
+  if (signal) options.signal = signal;
   const response = await fetch(path, options);
   const value = await response.json();
   if (!response.ok) throw new Error(value.error || "Palladio could not complete the request.");
@@ -52,10 +179,20 @@ function syncControls() {
     "#environment button, #add-kind, #add-element, #element input, #element select, #element button, #history, #assembly-form input, #assembly-form select, #assembly-form button",
   )) control.disabled = busy || !project || baselineView;
   for (const button of $("properties").querySelectorAll("button")) button.disabled = busy;
+  $("agent-provider").disabled = busy;
+  $("agent-model").disabled = busy || Boolean(modelRequest) || !installedModels.length;
+  $("refresh-models").disabled = busy || Boolean(modelRequest);
+  $("preview-request").disabled = busy || Boolean(agentRequest) || !project || baselineView ||
+    ($("agent-provider").value === "ollama" && (Boolean(modelRequest) || !$("agent-model").value));
+  $("cancel-request").hidden = !agentRequest;
+  $("cancel-request").disabled = !agentRequest;
+  $("apply-plan").disabled = busy || !project || baselineView || !pending ||
+    !(pending.commands || [pending.command]).filter(Boolean).length;
 }
 
 async function run(operation, onError = error => status(error.message, true)) {
   if (busy) return;
+  cancelAgentRequest("Request cancelled because the workspace changed. Nothing was saved.");
   busy = true;
   syncControls();
   try {
@@ -102,21 +239,37 @@ function showPlan(plan = null) {
   pending = plan;
   $("proposal").hidden = !plan;
   $("proposal-text").textContent = plan?.summary || "";
+  $("proposal-source").textContent = plan ? (plan.provider === "ollama"
+    ? `Local model: ${plan.model} · Suggested response · Revision ${plan.revision} · Not saved`
+    : `Built-in commands · Revision ${plan.revision} · Not saved`) : "";
+  $("proposal-commands-detail").open = false;
+  $("proposal-commands").textContent = plan ? JSON.stringify(plan.commands || (plan.command ? [plan.command] : []), null, 2) : "";
+  $("proposal-changes").replaceChildren();
+  for (const change of plan?.changes || []) {
+    const item = document.createElement("li");
+    item.textContent = change;
+    $("proposal-changes").append(item);
+  }
   updateViewport();
+  syncControls();
 }
 
 function updateViewport() {
-  const previewElements = !baselineView && pending?.elements;
-  $("assembly-preview-badge").hidden = !previewElements;
+  const hasEdits = pending && (pending.commands || [pending.command]).filter(Boolean).length > 0;
+  const previewElements = !baselineView && hasEdits && pending?.elements;
+  const previewScene = !baselineView && hasEdits && pending?.scene;
+  $("assembly-preview-badge").hidden = !previewElements && !previewScene;
   if (!project || !catalog) return;
-  const viewProject = previewElements ? {
+  const viewProject = previewScene ? {...project, scene: previewScene} : previewElements ? {
     ...project, scene: {...project.scene, elements: [...project.scene.elements, ...previewElements]},
   } : project;
+  $("rain").classList.toggle("active", (baselineView ? project.baseline : viewProject.scene).environment.weather === "rain");
   viewport?.update(viewProject, baselineView, catalog.materials, selected);
 }
 
 function discardOnEdit() {
-  if (!pending) return;
+  const wasRequest = cancelAgentRequest("Request cancelled because the input changed. Preview again when ready.");
+  if (!pending && !wasRequest) return;
   showPlan();
   status("Preview cleared. Preview again to review your changes.");
 }
@@ -135,12 +288,16 @@ function assemblyDefaults() {
 }
 
 function select(id) {
-  if (selected !== id) showPlan();
+  if (selected !== id) {
+    cancelAgentRequest("Request cancelled because the selection changed.");
+    showPlan();
+  }
   selected = id;
   render();
 }
 
 function showProject(next, resetView = false) {
+  cancelAgentRequest("Request cancelled because the property changed.");
   if (resetView) {
     selected = null;
     baselineView = false;
@@ -156,6 +313,8 @@ function showProject(next, resetView = false) {
 }
 
 function openProject(id) {
+  if (busy) return;
+  showPlan();
   return run(async () => {
     showProject(await api(propertiesPath + "/" + id), true);
     await loadLibrary();
@@ -220,6 +379,7 @@ function commit(payload, revision = project.revision) {
 }
 
 function showDialog(duplicate = false) {
+  cancelAgentRequest("Request cancelled because the property changed.");
   showPlan();
   duplicating = duplicate;
   $("property-form").reset();
@@ -257,6 +417,7 @@ $("property-form").addEventListener("submit", event => {
 for (const [id, mode] of [["design-view", false], ["baseline-view", true]]) {
   $(id).addEventListener("click", () => {
     if (baselineView === mode) return;
+    cancelAgentRequest("Request cancelled because the view changed.");
     baselineView = mode;
     showPlan();
     render();
@@ -295,15 +456,20 @@ $("restore").addEventListener("click", () => {
 });
 $("prompt-form").addEventListener("submit", event => {
   event.preventDefault();
-  run(async () => {
-    showPlan();
-    const plan = await api(propertiesPath + "/" + project.id + "/preview", {
-      prompt: $("request").value, selection: selected,
-    });
-    if (plan.revision !== project.revision) throw new Error("This property changed. Reopen it and preview again.");
-    showPlan(plan);
-    status("Review the proposed edit.");
-  });
+  previewRequest();
+});
+$("agent-provider").addEventListener("change", changeAgent);
+$("agent-model").addEventListener("change", () => {
+  cancelAgentRequest();
+  showPlan();
+  rememberedModel($("agent-model").value);
+  agentStatus($("agent-model").value ? `Selected ${$("agent-model").value}. Preview to review its proposed changes.` : "Choose an installed model.");
+});
+$("refresh-models").addEventListener("click", refreshModels);
+$("cancel-request").addEventListener("click", () => {
+  cancelAgentRequest("Request cancelled locally. Its reply will be ignored; Ollama may finish inference in the background.");
+  showPlan();
+  status("Request cancelled. No changes were saved.");
 });
 $("request").addEventListener("input", discardOnEdit);
 for (const form of ["assembly-form", "environment", "element"]) {
@@ -335,9 +501,10 @@ $("assembly-form").addEventListener("submit", event => {
   });
 });
 $("apply-plan").addEventListener("click", () => {
-  if (pending) commit({commands: [pending.command]}, pending.revision);
+  if (pending) commit({commands: pending.commands || [pending.command]}, pending.revision);
 });
 $("discard-plan").addEventListener("click", () => {
+  cancelAgentRequest();
   showPlan();
   status("Proposal discarded.");
 });
@@ -345,6 +512,14 @@ $("discard-plan").addEventListener("click", () => {
 render();
 run(async () => {
   catalog = await api("/api/catalog");
+  try {
+    const agent = await api("/api/agent");
+    if (Array.isArray(agent.providers)) {
+      $("agent-provider").replaceChildren(...agent.providers.map(item => option(item.id, item.label)));
+    }
+    $("agent-provider").value = "rules";
+    agentEndpoint = agent.endpoint || agentEndpoint;
+  } catch (error) { agentStatus("Agent settings unavailable. Built-in commands remain available. " + error.message, true); }
   $("weather").replaceChildren(...catalog.weather.map(value => option(value)));
   $("material").replaceChildren(...Object.keys(catalog.materials).map(value => option(value)));
   $("add-kind").replaceChildren(...Object.keys(catalog.elements).map(value => option(value)));
