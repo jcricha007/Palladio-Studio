@@ -99,3 +99,6 @@ dialog h1 { margin-bottom: .4rem; font-family: "Instrument Serif", Georgia, seri
   .project-title { display: none; }
   .topbar { justify-content: space-between; }
 }
+
+#assembly-preview-badge { position: absolute; top: 4.2rem; left: 1rem; padding: .45rem .7rem; border: 1px solid var(--accent); border-radius: 5px; color: var(--ink); background: #20241fe8; pointer-events: none; font-size: .84rem; }
+#assembly-form .muted { line-height: 1.4; }

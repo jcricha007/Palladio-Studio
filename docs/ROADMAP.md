@@ -43,3 +43,14 @@ Manual controls and agent proposals use the same command interface. Validate com
 The Unreal developer preview loads existing terrain, vegetation, and pavilion geometry from the local property server. It projects positions, dimensions, and yaw into Unreal coordinates and uses the same stable element IDs and revision checks as the browser. Free flight, original-site comparison, and horizontal element moves are included in the preview.
 
 Complete Windows acceptance with a saved 0.1 property, then add orbit and collision-aware walkthrough navigation before closing 0.2.
+
+## Architecture assembly increment
+
+Room and garage shells with genuine door gaps and window wall segmentation, plus simple
+dining and lounge furnishings, now use the same revision-safe command path as individual
+parts. Browser previews are unsaved; Apply commits all parts atomically. Both renderers
+consume the generated editable elements. This is an early 0.4 building block, not completion
+of that milestone or the intervening real-site work. Assemblies do not remain parametric
+groups after insertion, and arbitrary openings, stair generation, detailed assets, terrain
+imports and local-model planning remain future work. The separate navigation PR continues
+0.2 without changes to its Unreal code in this increment.

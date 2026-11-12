@@ -2,6 +2,7 @@
 
 import re
 
+from .assemblies import assembly_preview
 from .scene import ELEMENTS, MATERIALS, WEATHER, ValidationError, required_text
 
 
@@ -11,6 +12,10 @@ def preview(project, prompt, selection=None):
     hour = re.fullmatch(r"set (?:the )?time to (\d{1,2})(?::([0-5]\d))?", prompt)
     addition = re.fullmatch(r"add (?:a |an )?([a-z ]+)", prompt)
     material = re.fullmatch(r"(?:use |apply )([a-z ]+)", prompt)
+    assemblies = {"room": "room", "room shell": "room", "garage": "garage",
+                  "garage shell": "garage", "dining set": "dining", "lounge set": "lounge"}
+    if addition and addition[1] in assemblies:
+        return assembly_preview(project, {"kind": assemblies[addition[1]]})
     if weather and weather[1] in WEATHER:
         summary = f"Set weather to {weather[1]}."
         command = {"action": "environment", "environment": {"weather": weather[1]}}

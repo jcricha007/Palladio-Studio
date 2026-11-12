@@ -67,3 +67,39 @@ py -m unittest discover -s tests -v
 | `unreal/` | Native viewport, navigation, and revision-aware element moves |
 
 [Design roadmap](docs/ROADMAP.md)
+
+## Build a room, garage, or furnished space
+
+The **Assemblies** inspector adds configurable room and garage shells, a dining set,
+and a lounge set. Start with a blank property to avoid overlapping the starter pavilion.
+
+1. Choose an assembly and set its width, depth, height, position, rotation and material.
+2. Click **Preview assembly**. The added geometry is temporary until **Apply**; **Discard**
+   returns to the saved property. Changing a field or property also clears the proposal.
+3. Apply once to save all generated pieces in one revision. Each piece then appears in
+   the scene list and can be edited or removed individually using the existing inspector.
+4. Press **R** in the Unreal preview to load the saved pieces. The same IDs, positions,
+   dimensions and materials are projected into Unreal. Use history to restore the entire
+   addition, or duplicate the property before experimenting.
+
+Try `add a room`, `add a garage`, `add a dining set`, or `add a lounge set` in the prompt
+field for default-size previews. These are deterministic commands, not a connected AI model.
+
+Shell width/depth describe the outside walls, and height is the clear wall height above a
+0.15 m slab. Position Y is the slab bottom. Roofs overhang 0.2 m on each side. The front
+(+Z before rotation) has an open doorway, the rear has a glazed window opening. The garage
+entry is 2.8 × 2.5 m. Furniture width/depth describes its footprint; height is its tallest part.
+Placement does **not** snap to terrain or avoid existing objects. Use the flat site origin
+or set the elevation deliberately. Generated pieces are independent after creation; changing
+one does not regenerate the assembly. These schematic box models do not establish structural,
+accessibility, planning, energy, or building-code compliance.
+
+Developer verification:
+
+```powershell
+py -m unittest discover -s tests -v
+node tests/test_assembly_ui.cjs
+```
+
+The Node check uses a small DOM/viewport test double to check preview state and edit flows.
+It is not a substitute for browser rendering or Windows Unreal acceptance.

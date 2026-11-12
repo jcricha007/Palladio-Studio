@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 import webbrowser
 
 from .agent import preview
+from .assemblies import ASSEMBLIES, assembly_preview
 from .scene import ELEMENTS, MATERIALS, WEATHER, ValidationError
 from .store import Library, MissingProject, RevisionConflict
 
@@ -21,7 +22,7 @@ STATIC = {
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
 }
-PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview|unreal))?")
+PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview|assembly-preview|unreal))?")
 
 
 def handler_for(library):
@@ -56,7 +57,7 @@ def handler_for(library):
                 self.respond(200, content_type, (WEB / filename).read_bytes())
                 return
             if path == "/api/catalog":
-                self.json_response(200, {"elements": ELEMENTS, "materials": MATERIALS, "weather": WEATHER})
+                self.json_response(200, {"elements": ELEMENTS, "materials": MATERIALS, "weather": WEATHER, "assemblies": ASSEMBLIES})
                 return
             if path == "/api/properties":
                 self.json_response(200, library.list())
@@ -106,6 +107,8 @@ def handler_for(library):
                     self.json_response(200, library.commit(
                         match[1], data.get("revision"), data.get("commands"), data.get("restore"),
                     ))
+                elif match and match[2] == "assembly-preview":
+                    self.json_response(200, assembly_preview(library.get(match[1]), data.get("assembly")))
                 elif match and match[2] == "preview":
                     self.json_response(200, preview(library.get(match[1]), data.get("prompt"), data.get("selection")))
                 else:
