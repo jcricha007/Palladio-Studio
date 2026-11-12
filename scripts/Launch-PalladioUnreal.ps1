@@ -15,7 +15,7 @@ $project = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../unreal/Pallad
 $build = Join-Path $UnrealRoot 'Engine/Build/BatchFiles/Build.bat'
 $editor = Join-Path $UnrealRoot 'Engine/Binaries/Win64/UnrealEditor.exe'
 if (!(Test-Path -LiteralPath $build -PathType Leaf) -or !(Test-Path -LiteralPath $editor -PathType Leaf)) {
-    throw 'Pass the installed Unreal Engine directory to -UnrealRoot, for example C:\Program Files\Epic Games\UE_5.6.'
+    throw 'Pass the installed Unreal Engine directory to -UnrealRoot, for example C:\Program Files\Epic Games\UE_5.7.'
 }
 
 try {

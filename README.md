@@ -22,13 +22,14 @@ On macOS or Linux, run `python3 -m palladio` from the repository. If the browser
 
 ## Run the Unreal viewport preview on Windows
 
-Use Unreal Engine 5.6 and a Visual Studio C++ toolchain with the Windows SDK. Start the Python workspace from this checkout, open a saved property or create one with the starter pavilion, and leave the server running.
+Use Unreal Engine 5.7 and a Visual Studio C++ toolchain with the Windows SDK. Start the Python workspace from this checkout, open a saved property or create one with the starter pavilion, and leave the server running.
 
-In a second PowerShell window at the repository root, list your properties and launch the viewport with the ID you want:
+In a second PowerShell window at the repository root, launch the viewport with your most recently updated property:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8765/api/properties | Format-Table name, id, revision
-& .\scripts\Launch-PalladioUnreal.ps1 -UnrealRoot 'C:\Program Files\Epic Games\UE_5.6' -PropertyId '<property ID>'
+$Property = Invoke-RestMethod 'http://127.0.0.1:8765/api/properties' | Select-Object -First 1
+if (-not $Property) { throw 'Create a saved property in the browser first.' }
+& .\scripts\Launch-PalladioUnreal.ps1 -UnrealRoot 'C:\Program Files\Epic Games\UE_5.7' -PropertyId $Property.id
 ```
 
 The launcher compiles the Unreal editor target and starts it in a game window. Pass the same `-Port` as the Python server if you changed the default.
