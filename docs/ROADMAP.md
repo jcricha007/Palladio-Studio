@@ -40,6 +40,6 @@ Manual controls and agent proposals use the same command interface. Validate com
 
 ## Current 0.2 development
 
-The Unreal developer preview loads existing terrain, vegetation, and pavilion geometry from the local property server. It projects positions, dimensions, and yaw into Unreal coordinates and uses the same stable element IDs and revision checks as the browser. Free flight, original-site comparison, and horizontal element moves are included in the preview.
+The Unreal developer preview loads saved terrain, vegetation, and pavilion geometry. Free flight, selection-centered orbit, and collision-aware walking share the same property view. Navigation is session-local. Element moves continue to use the existing revision history.
 
-Complete Windows acceptance with a saved 0.1 property, then add orbit and collision-aware walkthrough navigation before closing 0.2.
+Windows acceptance covers orbit retargeting, walking across the terrain and through the pavilion entrance, collision with walls, and revision round-trips. After that check, 0.3 starts with georeferenced elevation and source provenance.

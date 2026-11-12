@@ -36,7 +36,9 @@ The launcher compiles the Unreal editor target and starts it in a game window. P
 
 | Control | Action |
 | --- | --- |
-| WASD and mouse | Fly around the property |
+| 1 | Free flight. WASD moves, the mouse looks around, and Q/E descends or climbs. |
+| 2 | Orbit the selected element or the site origin. Move the mouse to orbit and zoom with scroll or W/S. |
+| 3 | Walk at eye level. Palladio looks for a clear surface below the camera and falls back to the site entrance. WASD moves and the mouse looks around. |
 | Tab | Select the next pavilion element |
 | Arrow keys | Move the selected element 0.5 m along the property axes and save a revision |
 | B | Toggle the original site and the current design |
@@ -44,7 +46,14 @@ The launcher compiles the Unreal editor target and starts it in a game window. P
 
 For a round-trip check, select an element, move it once, and verify the new position and revision in the browser after reopening the property. Close and relaunch Unreal with the same ID to check persistence there. If another client edits the property first, the server rejects the stale move. Press **R** to load the new revision before trying again.
 
-The preview uses free-flight navigation, basic material colors, and simple sunlight and fog. Walk and orbit controls, richer weather, and a packaged Windows build are follow-up work.
+For the Windows navigation check:
+
+1. In **Fly**, move with WASD, look around with the mouse, and test Q/E.
+2. Press **2**, then **Tab**. Orbit the newly selected element and zoom in and out. Press **B** and verify the orbit moves to the original site center.
+3. Switch back to the design and fly over open ground by the pavilion entrance. Press **3**. Walk through the open entrance and into a wall to check that the wall stops movement. Walk outside onto sloping terrain, then press **1** to fly again.
+4. Move an element while orbiting it. The orbit should follow it after the save and the browser should show the new revision.
+
+The preview uses basic material colors and simple sunlight and fog. Richer weather and a packaged Windows build are follow-up work.
 
 ## Current scope
 
