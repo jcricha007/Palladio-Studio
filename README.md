@@ -20,9 +20,35 @@ On macOS or Linux, run `python3 -m palladio` from the repository. If the browser
 4. Switch to **Original site** to see the generated terrain and initial atmosphere. Restore an earlier design from **History** or duplicate the property to try a separate design.
 5. Close and relaunch the app to reopen the property. Committed edits are saved as revisions in `.palladio/properties.sqlite3` relative to the launch directory. Use `--library PATH` to choose a different database and `--port PORT` if 8765 is occupied.
 
+## Run the Unreal viewport preview on Windows
+
+Use Unreal Engine 5.7 and a Visual Studio C++ toolchain with the Windows SDK. Start the Python workspace from this checkout, open a saved property or create one with the starter pavilion, and leave the server running.
+
+In a second PowerShell window at the repository root, launch the viewport with your most recently updated property:
+
+```powershell
+$Property = Invoke-RestMethod 'http://127.0.0.1:8765/api/properties' | Select-Object -First 1
+if (-not $Property) { throw 'Create a saved property in the browser first.' }
+& .\scripts\Launch-PalladioUnreal.ps1 -UnrealRoot 'C:\Program Files\Epic Games\UE_5.7' -PropertyId $Property.id
+```
+
+The launcher compiles the Unreal editor target and starts it in a game window. Pass the same `-Port` as the Python server if you changed the default.
+
+| Control | Action |
+| --- | --- |
+| WASD and mouse | Fly around the property |
+| Tab | Select the next pavilion element |
+| Arrow keys | Move the selected element 0.5 m along the property axes and save a revision |
+| B | Toggle the original site and the current design |
+| R | Reload the latest saved revision |
+
+For a round-trip check, select an element, move it once, and verify the new position and revision in the browser after reopening the property. Close and relaunch Unreal with the same ID to check persistence there. If another client edits the property first, the server rejects the stale move. Press **R** to load the new revision before trying again.
+
+The preview uses free-flight navigation, basic material colors, and simple sunlight and fog. Walk and orbit controls, richer weather, and a packaged Windows build are follow-up work.
+
 ## Current scope
 
-The 0.1 foundation includes three procedural site profiles, a WebGL orbit viewport, basic box-based architectural elements, material swatches, simple atmosphere controls, project duplication, and revision history. Prompts use a small rule-based adapter that exercises the same validated command interface as the manual tools. Real-world terrain imports, Unreal rendering, walkthroughs, visual references, and local-model planning are roadmap milestones.
+The 0.1 foundation includes three procedural site profiles, a WebGL orbit viewport, basic box-based architectural elements, material swatches, simple atmosphere controls, project duplication, and revision history. Prompts use a small rule-based adapter that exercises the same validated command interface as the manual tools. The Unreal developer preview opens the same saved properties and commits element moves to the same revision history. Real-world terrain imports, visual references, and local-model planning are later milestones.
 
 ## Develop
 
@@ -37,5 +63,7 @@ py -m unittest discover -s tests -v
 | `palladio/agent.py` | Prompt-to-command preview adapter |
 | `palladio/__main__.py` | Loopback application server and JSON interface |
 | `palladio/web/` | Property workspace, inspector, and WebGL renderer |
+| `palladio/unreal.py` | Scene projection from local metres and Y up into Unreal centimetres and Z up |
+| `unreal/` | Native viewport, navigation, and revision-aware element moves |
 
 [Design roadmap](docs/ROADMAP.md)

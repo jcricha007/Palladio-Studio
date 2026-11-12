@@ -38,6 +38,8 @@ Manual controls and agent proposals use the same command interface. Validate com
 - Place large replacements in a new design version. Request confirmation before permanently deleting project data. Surface unsupported requests and missing assets explicitly.
 - Benchmark local inference while the Unreal viewport is running on the target Windows workstation with its RTX 4090. Measure edit latency, frame time, VRAM use, and how often plans need correction before choosing a default model and quality preset.
 
-## Next development milestone
+## Current 0.2 development
 
-Build the Unreal scene adapter around one saved 0.1 property. Start with the terrain, starter pavilion, and camera controls. Use matching transforms and persistent IDs to test round-trip edits before adding more rendering and modeling features.
+The Unreal developer preview loads existing terrain, vegetation, and pavilion geometry from the local property server. It projects positions, dimensions, and yaw into Unreal coordinates and uses the same stable element IDs and revision checks as the browser. Free flight, original-site comparison, and horizontal element moves are included in the preview.
+
+Complete Windows acceptance with a saved 0.1 property, then add orbit and collision-aware walkthrough navigation before closing 0.2.
