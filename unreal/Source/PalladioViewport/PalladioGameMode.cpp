@@ -193,7 +193,9 @@ void APalladioGameMode::AddShape(UStaticMesh* Mesh, const FVector& Center, const
 
 void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
 {
-ayField(TEXT("vertices_cm")))
+    TArray<FVector> Vertices;
+    TArray<int32> Indices;
+    for (const auto& Value : View->GetArrayField(TEXT("vertices_cm")))
     {
         const auto& Point = Value->AsArray();
         Vertices.Emplace(Point[0]->AsNumber(), Point[1]->AsNumber(), Point[2]->AsNumber());
@@ -235,8 +237,6 @@ ayField(TEXT("vertices_cm")))
             0, FColor(61, 100, 59));
     }
 
-    const auto& Elements = View->GetArrayField(TEXT("elements"));
-    if (!Elements.ContainsByPred
     // Landscape actors belong to the immutable site and survive design refreshes.
     Shapes.Reset();
 }
