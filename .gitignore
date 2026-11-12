@@ -2,3 +2,9 @@ __pycache__/
 *.py[cod]
 .venv/
 .palladio/
+unreal/Binaries/
+unreal/DerivedDataCache/
+unreal/Intermediate/
+unreal/Saved/
+unreal/.vs/
+unreal/*.sln

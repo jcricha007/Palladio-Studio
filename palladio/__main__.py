@@ -12,6 +12,8 @@ from .agent import preview
 from .scene import ELEMENTS, MATERIALS, WEATHER, ValidationError
 from .store import Library, MissingProject, RevisionConflict
 
+from .unreal import unreal_view
+
 WEB = Path(__file__).with_name("web")
 STATIC = {
     "/": ("index.html", "text/html"),
@@ -19,7 +21,7 @@ STATIC = {
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
 }
-PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview))?")
+PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview|unreal))?")
 
 
 def handler_for(library):
@@ -60,9 +62,10 @@ def handler_for(library):
                 self.json_response(200, library.list())
                 return
             match = PROPERTY_ROUTE.fullmatch(path)
-            if match and match[2] is None:
+            if match and match[2] in (None, "unreal"):
                 try:
-                    self.json_response(200, library.get(match[1]))
+                    project = library.get(match[1])
+                    self.json_response(200, unreal_view(project) if match[2] == "unreal" else project)
                 except MissingProject as error:
                     self.json_response(404, {"error": str(error)})
                 return

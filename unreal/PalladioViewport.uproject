@@ -1,0 +1,10 @@
+{
+  "FileVersion": 3,
+  "Category": "Architecture",
+  "Modules": [
+    { "Name": "PalladioViewport", "Type": "Runtime", "LoadingPhase": "Default" }
+  ],
+  "Plugins": [
+    { "Name": "ProceduralMeshComponent", "Enabled": true }
+  ]
+}
