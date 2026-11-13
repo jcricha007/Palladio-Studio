@@ -112,3 +112,22 @@ node tests/test_assembly_ui.cjs
 
 The Node check uses a small DOM/viewport test double to check preview state and edit flows.
 It is not a substitute for browser rendering or Windows Unreal acceptance.
+
+## Import an elevation grid
+
+Choose **New property → Import elevation grid** and upload a prepared JSON file. Try
+[`examples/elevation-grid.json`](examples/elevation-grid.json) first. It contains synthetic
+elevations for testing the workflow. After saving, the property is available in both
+viewports through the usual launch commands.
+
+Use an odd square grid of 3–129 samples per side with uniform spacing in metres and a
+20–256 m span. Write elevations in metres, row by row from north to south, with columns
+running west to east. Record the centre latitude and longitude in decimal degrees and
+identify the source dataset and vertical datum. The centre sample becomes local zero
+height, with +X east and +Z south in the studio. Source metadata and original relief are
+saved with the property. The import expects a grid already projected onto a local
+metre-based plane.
+
+Imported properties start with bare terrain. Place buildings manually using the local
+height of the ground. Address lookup, direct GeoTIFF import, and inferred vegetation and
+surroundings are later steps.

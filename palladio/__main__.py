@@ -97,7 +97,10 @@ def handler_for(library):
             try:
                 data = self.read_json()
                 if path == "/api/properties":
-                    result = library.create(data.get("name"), data.get("brief"), data.get("starter", False))
+                    result = library.create(
+                        data.get("name"), data.get("brief"), data.get("starter", False),
+                        elevation=data.get("elevation"),
+                    )
                     self.json_response(201, result)
                     return
                 match = PROPERTY_ROUTE.fullmatch(path)

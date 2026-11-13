@@ -36,7 +36,7 @@
         </div>
         <div id="empty-state">
           <h1>Start with a landscape.</h1>
-          <p>Describe the setting for your first property.</p>
+          <p>Describe a setting or import an elevation grid.</p>
           <button id="empty-create" type="button" class="primary">Create a property</button>
         </div>
         <div class="view-bottom">
@@ -138,8 +138,17 @@
       <h1 id="dialog-title">New property</h1>
       <label>Name<input id="property-name" placeholder="Ridge House" maxlength="100" required></label>
       <div id="new-fields" class="stack">
-        <label>Landscape description<textarea id="landscape-brief" maxlength="8000" rows="4" placeholder="A wooded hillside with a clearing in the pines"></textarea></label>
-        <label class="checkbox"><input id="starter" type="checkbox" checked> Include a starter pavilion</label>
+        <label>Landscape source
+          <select id="landscape-source">
+            <option value="procedural">Describe a landscape</option>
+            <option value="elevation">Import elevation grid</option>
+          </select>
+        </label>
+        <label id="elevation-file-field" hidden>Elevation grid (.json)
+          <input id="elevation-file" type="file" accept=".json,application/json">
+        </label>
+        <label id="landscape-brief-field">Landscape description<textarea id="landscape-brief" maxlength="8000" rows="4" placeholder="A wooded hillside with a clearing in the pines"></textarea></label>
+        <label id="starter-field" class="checkbox"><input id="starter" type="checkbox" checked> Include a starter pavilion</label>
       </div>
       <p id="dialog-error" role="alert" hidden></p>
       <div class="input-row">
