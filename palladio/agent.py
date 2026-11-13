@@ -13,7 +13,7 @@ def preview(project, prompt, selection=None):
     addition = re.fullmatch(r"add (?:a |an )?([a-z ]+)", prompt)
     material = re.fullmatch(r"(?:use |apply )([a-z ]+)", prompt)
     assemblies = {"room": "room", "room shell": "room", "garage": "garage",
-                  "garage shell": "garage", "dining set": "dining", "lounge set": "lounge"}
+                  "garage shell": "garage", "dining set": "dining", "lounge set": "lounge", "stairs":"stairs", "path":"path", "terrace":"path", "planter":"planter"}
     if addition and addition[1] in assemblies:
         return assembly_preview(project, {"kind": assemblies[addition[1]]})
     if weather and weather[1] in WEATHER:

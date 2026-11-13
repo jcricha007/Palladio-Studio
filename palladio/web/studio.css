@@ -31,6 +31,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 button:disabled { opacity: .48; cursor: default; }
 input, select, textarea { padding: .51rem .56rem; width: 100%; }
 textarea { resize: vertical; }
+#reference-image { width:100%; max-height:180px; object-fit:contain; border-radius:5px; margin:.5rem 0; }
+#reference-use { width:auto; justify-self:start; }
 label { display: grid; gap: .35rem; color: var(--muted); font-size: .86rem; }
 h1, h2, p { margin: 0; }
 h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .13em; color: var(--muted); margin: 0 0 .8rem; }

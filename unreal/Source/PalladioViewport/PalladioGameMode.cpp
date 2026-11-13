@@ -193,11 +193,53 @@ void APalladioGameMode::AddShape(UStaticMesh* Mesh, const FVector& Center, const
     Shapes.Add(Actor);
 }
 
+void APalladioGameMode::AddMesh(const TSharedPtr<FJsonObject>& Element, bool bSelected)
+{
+    FVector Base = VectorField(Element, TEXT("center_cm"));
+    Base.Z -= VectorField(Element, TEXT("dimensions_cm")).Z / 2;
+    auto* Actor = GetWorld()->SpawnActor<AActor>(Base, FRotator(0, Element->GetNumberField(TEXT("yaw_degrees")), 0));
+    auto* Mesh = NewObject<UProceduralMeshComponent>(Actor);
+    Mesh->SetMobility(EComponentMobility::Movable);
+    Actor->SetRootComponent(Mesh);
+    Mesh->SetCollisionProfileName(TEXT("BlockAll"));
+    Mesh->bUseComplexAsSimpleCollision = true;
+    Mesh->RegisterComponent();
+    // A plain AActor has no root when spawned; set its transform after attaching one.
+    Actor->SetActorLocationAndRotation(Base, FRotator(0, Element->GetNumberField(TEXT("yaw_degrees")), 0));
+    int32 SectionIndex = 0;
+    for (const auto& Value : Element->GetArrayField(TEXT("mesh_sections")))
+    {
+        const auto& Section = Value->AsObject();
+        TArray<FVector> Vertices;
+        TArray<int32> Indices;
+        for (const auto& PointValue : Section->GetArrayField(TEXT("vertices_cm")))
+        {
+            const auto& Point = PointValue->AsArray();
+            Vertices.Emplace(Point[0]->AsNumber(), Point[1]->AsNumber(), Point[2]->AsNumber());
+        }
+        for (const auto& Index : Section->GetArrayField(TEXT("triangles"))) Indices.Add(static_cast<int32>(Index->AsNumber()));
+        TArray<FVector> Normals;
+        Normals.Init(FVector::ZeroVector, Vertices.Num());
+        for (int32 Index = 0; Index < Indices.Num(); Index += 3)
+        {
+            const int32 A = Indices[Index], B = Indices[Index + 1], C = Indices[Index + 2];
+            const FVector Normal = FVector::CrossProduct(Vertices[C] - Vertices[A], Vertices[B] - Vertices[A]);
+            Normals[A] += Normal; Normals[B] += Normal; Normals[C] += Normal;
+        }
+        for (FVector& Normal : Normals) Normal.Normalize();
+        Mesh->CreateMeshSection_LinearColor(SectionIndex, Vertices, Indices, Normals,
+            TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), true);
+        Mesh->SetMaterial(SectionIndex, Tint(bSelected ? FColor::FromHex(TEXT("F0BC6A")) : FColor::FromHex(Section->GetStringField(TEXT("color")))));
+        ++SectionIndex;
+    }
+    Shapes.Add(Actor);
+}
+
 void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
 {
     TArray<FVector> Vertices;
     TArray<int32> Indices;
-    for (const auto& Value : View->GetArrayField(TEXT("vertices_cm")))
+    for (const auto& Value : View->GetArrayField(bBaseline && View->HasField(TEXT("baseline_vertices_cm")) ? TEXT("baseline_vertices_cm") : TEXT("vertices_cm")))
     {
         const auto& Point = Value->AsArray();
         Vertices.Emplace(Point[0]->AsNumber(), Point[1]->AsNumber(), Point[2]->AsNumber());
@@ -228,7 +270,7 @@ void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
     {
         AddShape(Cube, FVector(0, 9950, -805), FVector(34000, 16100, 10), 0, FColor(61, 110, 122));
     }
-    for (const auto& Value : View->GetArrayField(TEXT("vegetation")))
+    for (const auto& Value : View->GetArrayField(bBaseline && View->HasField(TEXT("baseline_vegetation")) ? TEXT("baseline_vegetation") : TEXT("vegetation")))
     {
         const auto& Tree = Value->AsObject();
         const FVector Base = VectorField(Tree, TEXT("base_cm"));
@@ -239,21 +281,17 @@ void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
             0, FColor(61, 100, 59));
     }
 
-    // Landscape actors belong to the immutable site and survive design refreshes.
-    Shapes.Reset();
+
 }
 
 void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
 {
-    if (Terrain->GetNumSections() == 0)
-    {
-        BuildLandscape(View);
-    }
     for (AActor* Shape : Shapes)
     {
         Shape->Destroy();
     }
     Shapes.Reset();
+    BuildLandscape(View);
 
     const auto& Elements = View->GetArrayField(TEXT("elements"));
     if (!Elements.ContainsByPredicate([this](const auto& Value)
@@ -269,7 +307,8 @@ void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
             const auto& Element = Value->AsObject();
             const FVector Center = VectorField(Element, TEXT("center_cm"));
             const bool bSelected = Element->GetStringField(TEXT("id")) == Selection;
-            AddShape(Cube, Center, VectorField(Element, TEXT("dimensions_cm")),
+            if (Element->HasTypedField<EJson::Array>(TEXT("mesh_sections"))) AddMesh(Element, bSelected);
+            else AddShape(Cube, Center, VectorField(Element, TEXT("dimensions_cm")),
                 Element->GetNumberField(TEXT("yaw_degrees")), FColor::FromHex(Element->GetStringField(TEXT("color"))),
                 bSelected, true);
             if (bSelected)
@@ -308,11 +347,21 @@ void APalladioGameMode::MoveSelection(const FVector& DeltaMetres)
             const FVector Center = VectorField(Element, TEXT("center_cm"));
             const FVector Dimensions = VectorField(Element, TEXT("dimensions_cm"));
             const FVector Base(Center.X / 100, (Center.Z - Dimensions.Z / 2) / 100, Center.Y / 100);
-            const FVector Position = Base + DeltaMetres;
+            FString EditId = Selection;
+            FString Action = TEXT("update");
+            FVector EditBase = Base;
+            if (Element->HasTypedField<EJson::String>(TEXT("edit_id")))
+            {
+                EditId = Element->GetStringField(TEXT("edit_id"));
+                Action = Element->GetStringField(TEXT("edit_action"));
+                EditBase = VectorField(Element, TEXT("edit_position"));
+            }
+            const FVector Position = EditBase + DeltaMetres;
+            const FString Field = Action == TEXT("assembly_update") ? TEXT("assembly") : TEXT("element");
             Request(FString::Printf(
-                TEXT("{\"revision\":%d,\"commands\":[{\"action\":\"update\",\"id\":\"%s\",")
-                TEXT("\"element\":{\"position\":[%.8f,%.8f,%.8f]}}]}"),
-                Current->GetIntegerField(TEXT("revision")), *Selection, Position.X, Position.Y, Position.Z));
+                TEXT("{\"revision\":%d,\"commands\":[{\"action\":\"%s\",\"id\":\"%s\",")
+                TEXT("\"%s\":{\"position\":[%.8f,%.8f,%.8f]}}]}"),
+                Current->GetIntegerField(TEXT("revision")), *Action, *EditId, *Field, Position.X, Position.Y, Position.Z));
             return;
         }
     }

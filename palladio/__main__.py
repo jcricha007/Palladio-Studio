@@ -8,6 +8,8 @@ import re
 from urllib.parse import urlsplit
 import webbrowser
 
+from .assets import AssetStore
+from .commands import preview_commands
 from .local_agent import AgentError, AgentService, OllamaPlanner
 from .assemblies import ASSEMBLIES, assembly_preview
 from .scene import ELEMENTS, MATERIALS, WEATHER, ValidationError
@@ -21,14 +23,19 @@ STATIC = {
     "/": ("index.html", "text/html"),
     "/studio.css": ("studio.css", "text/css"),
     "/site-picker.js": ("site-picker.js", "text/javascript"),
+    "/mesh.js": ("mesh.js", "text/javascript"),
+    "/assets.js": ("assets.js", "text/javascript"),
+    "/references.js": ("references.js", "text/javascript"),
+    "/tools.js": ("tools.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
 }
-PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview|assembly-preview|unreal))?")
+PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
 
 
 def handler_for(library, agent=None, sites=None):
     agent = agent or AgentService()
+    assets = AssetStore(library.path.parent / (library.path.stem + "-assets"))
     sites = sites or SiteService(library.path.parent / (library.path.stem + "-sites"))
     class Handler(BaseHTTPRequestHandler):
         def respond(self, status, content_type, body):
@@ -38,7 +45,7 @@ def handler_for(library, agent=None, sites=None):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Security-Policy",
-                             "default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+                             "default-src 'self'; img-src 'self' data: blob:; base-uri 'none'; frame-ancestors 'none'")
             self.end_headers()
             try:
                 self.wfile.write(body)
@@ -62,6 +69,13 @@ def handler_for(library, agent=None, sites=None):
             if path in STATIC:
                 filename, content_type = STATIC[path]
                 self.respond(200, content_type, (WEB / filename).read_bytes())
+                return
+            if path == '/api/assets':
+                self.json_response(200, assets.list())
+                return
+            if path.startswith('/api/assets/'):
+                try: self.json_response(200, assets.get(path.removeprefix('/api/assets/')))
+                except ValidationError as error: self.json_response(404, {'error': str(error)})
                 return
             if path == "/api/agent":
                 self.json_response(200, agent.describe())
@@ -106,6 +120,10 @@ def handler_for(library, agent=None, sites=None):
             path = urlsplit(self.path).path
             try:
                 data = self.read_json()
+                if path == '/api/assets/import':
+                    item = assets.import_data(data.get('name'), data.get('format'), data.get('data'), data.get('units', 'm'))
+                    self.json_response(201, {k:v for k,v in item.items() if k!='mesh'})
+                    return
                 if path == "/api/agent/models":
                     self.json_response(200, agent.models())
                     return
@@ -137,18 +155,34 @@ def handler_for(library, agent=None, sites=None):
                     self.json_response(200, library.commit(
                         match[1], data.get("revision"), data.get("commands"), data.get("restore"),
                     ))
+                elif match and match[2] in ('asset-capture', 'asset-preview'):
+                    project = library.get(match[1])
+                    if type(data.get('revision')) is not int or data['revision'] != project['revision']:
+                        raise RevisionConflict('Property changed. Reload before working with assets.')
+                    if match[2] == 'asset-capture':
+                        item = assets.capture(project, data.get('selection'), data.get('name'))
+                        self.json_response(201, {k:v for k,v in item.items() if k!='mesh'})
+                    else:
+                        item = assets.element(data.get('asset_id'), data.get('position'), data.get('yaw', 0))
+                        self.json_response(200, preview_commands(project, project['revision'], [{'action':'add','element':item}]))
+                elif match and match[2] == "command-preview":
+                    project = library.get(match[1])
+                    plan = preview_commands(project, data.get('revision'), data.get('commands'))
+                    self.json_response(200, plan)
                 elif match and match[2] == "assembly-preview":
                     self.json_response(200, assembly_preview(library.get(match[1]), data.get("assembly")))
                 elif match and match[2] == "preview":
                     project = library.get(match[1])
                     plan = agent.preview(project, data.get("prompt"), data.get("selection"),
                                          provider=data.get("provider", "rules"), model=data.get("model"),
-                                         revision=data.get("revision"))
+                                         revision=data.get("revision"),references=data.get('references'),query=data.get('query',''))
                     if library.get(match[1])["revision"] != plan["revision"]:
                         raise RevisionConflict("This property changed while the agent was planning. Reload it and preview again.")
                     self.json_response(200, plan)
                 else:
                     self.json_response(404, {"error": "Route not found."})
+            except OSError:
+                self.json_response(503, {'error': 'Local files could not be read or written. Check disk access and free space.'})
             except SiteError as error:
                 self.json_response(502, {"error": str(error)})
             except AgentError as error:

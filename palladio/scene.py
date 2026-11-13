@@ -110,7 +110,7 @@ def element(data):
     material = required_text(data.get("material"), "Material", 40)
     if kind not in ELEMENTS or material not in MATERIALS:
         raise ValidationError("Choose a supported element type and material.")
-    return {
+    result = {
         "kind": kind,
         "name": required_text(data.get("name"), "Element name", 100),
         "material": material,
@@ -118,6 +118,13 @@ def element(data):
         "size": vector(data.get("size"), "Size (m)", 0.05, 300),
         "yaw": number(data.get("yaw", 0), "Rotation (degrees)", -360, 360),
     }
+    if 'mesh' in data:
+        from .geometry import mesh
+        result['mesh'] = mesh(data['mesh'])
+    if data.get('finish') is not None:
+        from .geometry import finish
+        result['finish'] = finish(data['finish'])
+    return result
 
 
 def starter_elements():
@@ -137,16 +144,20 @@ def starter_elements():
     ]
 
 
-def edit_scene(scene, command):
+def edit_scene(scene, command, baseline=None):
     """Apply one tool command to a private scene copy owned by the transaction."""
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
-    if action == "assembly":
-        from .assemblies import generate_assembly
-        spec, pieces = generate_assembly(command.get("assembly"))
-        scene["elements"].extend({**piece, "id": str(uuid4())} for piece in pieces)
-        return f"Added {spec['name']} ({len(pieces)} parts)"
+    if action in {'reference_add','reference_update','reference_remove'}:
+        from .references import edit_reference
+        return edit_reference(scene, command)
+    if action in {'terrain_layer','terrain_toggle','terrain_remove','terrain_restore'}:
+        from .landscape_tools import edit_terrain
+        return edit_terrain(scene, command, baseline)
+    if action in {'assembly', 'assembly_update', 'assembly_place', 'assembly_duplicate', 'assembly_remove', 'assembly_detach'}:
+        from .groups import edit_group
+        return edit_group(scene, command, baseline)
     if action == "add":
         item = element(command.get("element"))
         item["id"] = str(uuid4())
@@ -156,15 +167,20 @@ def edit_scene(scene, command):
         target = next((item for item in scene["elements"] if item["id"] == command.get("id")), None)
         if target is None:
             raise ValidationError("This element is no longer in the design.")
+        from .groups import member_edit
         if action == "remove":
+            member_edit(scene, target)
             scene["elements"].remove(target)
             return f"Removed {target['name']}"
         changes = command.get("element")
         if not isinstance(changes, dict) or not changes.keys() <= {
-            "kind", "name", "material", "position", "size", "yaw"
+            "kind", "name", "material", "position", "size", "yaw", "finish"
         }:
             raise ValidationError("Invalid element fields.")
-        target.update(element({**target, **changes}))
+        checked = element({**target, **changes})
+        member_edit(scene, target, {key: value for key, value in changes.items() if value != target.get(key)})
+        target.update(checked)
+        if "finish" in changes and changes["finish"] is None: target.pop("finish", None)
         return f"Edited {target['name']}"
     if action == "environment":
         changes = command.get("environment")

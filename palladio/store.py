@@ -148,7 +148,7 @@ class Library:
                 if not isinstance(commands, list) or not 1 <= len(commands) <= 100:
                     raise ValidationError("Submit between 1 and 100 scene commands.")
                 scene = current["scene"]
-                labels = [edit_scene(scene, command) for command in commands]
+                labels = [edit_scene(scene, command, current["baseline"]) for command in commands]
                 label = labels[0] if len(labels) == 1 else f"Applied {len(labels)} edits"
             revision = current["revision"] + 1
             connection.execute("INSERT INTO revisions VALUES (?, ?, ?, ?)", (

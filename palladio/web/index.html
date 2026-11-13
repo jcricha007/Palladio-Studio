@@ -51,7 +51,8 @@
           <button id="refresh-models" type="button" hidden>Refresh models</button>
         </div>
         <p id="agent-status" class="muted" role="status" aria-live="polite">Built-in commands use no language model.</p>
-        <p id="agent-privacy" class="muted" hidden>Preview sends your prompt and relevant scene text to Ollama on this computer. No model downloads or remote services are started. Images and autonomous jobs are not supported yet.</p>
+        <p id="agent-privacy" class="muted" hidden>Preview sends your prompt, scene excerpt and explicitly selected reference image to Ollama on this computer. A reference needs a vision-capable local model. No model downloads or remote services are started.</p>
+        <label>Context filter (optional name/type)<input id="agent-query" maxlength="160" placeholder="e.g. garage — selection is always included"></label>
         <form id="prompt-form">
           <label for="request">Design prompt</label>
           <div class="input-row">
@@ -78,6 +79,53 @@
     <aside class="inspector panel" aria-label="Property inspector">
       <div id="inspector">
         <details id="saved-source" hidden><summary>Site source</summary><p id="saved-source-text"></p></details>
+        <details id="reference-board">
+          <summary>Reference board</summary>
+          <p class="muted">Save up to six photos or sketches with chosen design cues. A resized copy stays in this property's history.</p>
+          <label>Saved reference<select id="reference-list"></select></label>
+          <img id="reference-image" hidden alt="Selected design reference">
+          <label><input id="reference-use" type="checkbox">Use selected image for the next agent preview</label>
+          <form id="reference-form" class="stack">
+            <label>Name<input id="reference-name" maxlength="80" value="Reference" required></label>
+            <label>Design cues<textarea id="reference-cues" maxlength="1600" rows="3" placeholder="Use the timber colour and spacing; preserve the current dimensions."></textarea></label>
+            <label>New photo/sketch<input id="reference-file" type="file" accept="image/png,image/jpeg"></label>
+            <button type="submit">Preview adding image</button>
+            <button id="reference-save" type="button">Preview name/cue changes</button>
+            <button id="reference-remove" type="button">Preview remove reference</button>
+          </form>
+        </details>
+        <section id="group-panel" hidden>
+          <h2 id="group-title">Selected assembly</h2>
+          <form id="group-form" class="stack">
+            <p class="muted">Edit linked parts together. Part names and materials remain overrides. Detach to edit individual geometry.</p>
+            <div class="triplet">
+              <label>Width<input id="group-width" type="number" step="any" min="0.05" required></label>
+              <label>Depth<input id="group-depth" type="number" step="any" min="0.05" required></label>
+              <label>Height<input id="group-height" type="number" step="any" min="0.05" required></label>
+            </div>
+            <div class="triplet">
+              <label>X<input id="group-x" type="number" step="any" required></label>
+              <label>Y<input id="group-y" type="number" step="any" required></label>
+              <label>Z<input id="group-z" type="number" step="any" required></label>
+            </div>
+            <label>Rotation (degrees)<input id="group-yaw" type="number" step="any" required></label>
+            <label id="group-steps-label" hidden>Step count<input id="group-steps" type="number" min="2" max="32" step="1"></label>
+            <div id="group-openings" class="stack">
+              <label>Door width<input id="group-door_width" type="number" step="any"></label>
+              <label>Door height<input id="group-door_height" type="number" step="any"></label>
+              <label>Window width<input id="group-window_width" type="number" step="any"></label>
+              <label>Window height<input id="group-window_height" type="number" step="any"></label>
+              <label>Window sill<input id="group-window_sill" type="number" step="any"></label>
+            </div>
+            <button type="submit">Preview assembly changes</button>
+            <label>Ground offset (m)<input id="group-offset" type="number" value="0" min="-5" max="50" step="any"></label>
+            <button id="group-place" type="button">Preview placement on ground</button>
+            <button id="group-duplicate" type="button">Preview copy at X/Y/Z</button>
+            <button id="group-detach" type="button">Preview detach into pieces</button>
+            <button id="group-remove" type="button">Preview remove assembly</button>
+          </form>
+          <hr>
+        </section>
         <h2>Environment</h2>
         <form id="environment" class="stack">
           <label>Weather<select id="weather"></select></label>
@@ -85,9 +133,67 @@
           <button type="submit">Update environment</button>
         </form>
         <hr>
+        <details id="terrain-tools">
+          <summary>Terrain design layers</summary>
+          <form id="terrain-form" class="stack">
+            <p class="muted">Original ground stays saved. Flatten creates a flat centre with a blended edge. Buildings keep their positions.</p>
+            <label>Layer name<input id="terrain-name" value="Ground edit" maxlength="80" required></label>
+            <label>Operation<select id="terrain-mode"><option value="raise">Raise</option><option value="lower">Lower</option><option value="flatten">Flatten toward height</option></select></label>
+            <div class="triplet">
+              <label>X<input id="terrain-x" type="number" value="0" step="any" required></label>
+              <label>Z<input id="terrain-z" type="number" value="0" step="any" required></label>
+              <label>Radius (m)<input id="terrain-radius" type="number" value="12" min="0.25" max="128" step="any" required></label>
+            </div>
+            <label>Raise/lower (m)<input id="terrain-amount" type="number" value="1" min="0.01" max="20" step="any"></label>
+            <label>Flatten local height (m)<input id="terrain-height" type="number" value="0" min="-200" max="200" step="any"></label>
+            <button type="submit">Preview terrain layer</button>
+            <label>Saved layers<select id="terrain-layers"></select></label>
+            <button id="terrain-toggle" type="button">Preview enable / disable</button>
+            <button id="terrain-remove" type="button">Preview remove layer</button>
+            <button id="terrain-restore" type="button">Preview restore original ground</button>
+          </form>
+        </details>
+        <hr>
+        <details>
+          <summary>Reusable assets</summary>
+          <p class="muted">Import a triangulated OBJ or capture a selection. Capturing an assembly freezes its current shape as a mesh.</p>
+          <form id="asset-import-form" class="stack">
+            <label>Asset name<input id="asset-name" maxlength="80" value="My asset" required></label>
+            <label>OBJ / asset JSON<input id="asset-file" type="file" accept=".obj,.json" required></label>
+            <label>OBJ units<select id="asset-units"><option value="m">Metres</option><option value="cm">Centimetres</option><option value="mm">Millimetres</option><option value="in">Inches</option></select></label>
+            <button type="submit">Import into library</button>
+            <button id="asset-capture" type="button">Capture selection</button>
+          </form>
+          <div id="asset-placement" class="stack">
+            <button id="asset-refresh" type="button">Refresh assets</button>
+            <label>Saved asset<select id="asset-list"></select></label>
+            <div class="triplet">
+              <label>X<input id="asset-x" type="number" value="0" step="any"></label>
+              <label>Y<input id="asset-y" type="number" value="0" step="any"></label>
+              <label>Z<input id="asset-z" type="number" value="0" step="any"></label>
+            </div>
+            <label>Rotation<input id="asset-yaw" type="number" value="0" step="any"></label>
+            <button id="asset-place" type="button">Preview asset placement</button>
+            <button id="asset-export" type="button">Export asset JSON</button>
+          </div>
+          <p id="asset-status" role="status" class="muted"></p>
+        </details>
+        <section id="finish-panel" hidden>
+          <h2>Selected finish</h2>
+          <form id="finish-form" class="stack">
+            <label>Colour<input id="finish-color" type="color" value="#b78554"></label>
+            <label>Pattern<select id="finish-pattern"><option value="solid">Solid</option><option value="wood">Wood grain</option></select></label>
+            <label>Grain spacing (m)<input id="finish-scale" type="number" value="0.25" min="0.02" max="10" step="any" required></label>
+            <label>Grain direction<input id="finish-rotation" type="number" value="0" min="-360" max="360" step="any" required></label>
+            <label class="checkbox"><input id="finish-source" type="checkbox">Use imported triangle colours</label>
+            <button type="submit">Preview finish</button>
+            <button id="finish-reset" type="button">Preview original finish</button>
+          </form>
+        </section>
+        <hr>
         <h2>Assembly builder</h2>
         <form id="assembly-form" class="stack">
-          <p class="muted">Preview simple room shells and furnishing sets, then save their editable pieces together.</p>
+          <p class="muted">Preview simple room shells and furnishing sets, then save them as linked assemblies. Select a saved part to edit its assembly.</p>
           <label>Assembly<select id="assembly-kind"></select></label>
           <label>Name<input id="assembly-name" maxlength="60" required></label>
           <fieldset>

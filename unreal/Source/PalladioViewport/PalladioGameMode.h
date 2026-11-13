@@ -26,6 +26,7 @@ public:
 
 private:
     void Request(const FString& EditBody = FString());
+    void AddMesh(const TSharedPtr<FJsonObject>& Element, bool bSelected);
     void BuildLandscape(const TSharedPtr<FJsonObject>& View);
     void Display(const TSharedPtr<FJsonObject>& View);
     void MoveSelection(const FVector& DeltaMetres);

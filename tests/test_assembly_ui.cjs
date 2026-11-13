@@ -16,7 +16,7 @@ class Node {
 const node=id=>nodes.get(id)|| (nodes.set(id,new Node(id)),nodes.get(id));
 for(const m of fs.readFileSync(root+'/palladio/web/index.html','utf8').matchAll(/id="([^"]+)"/g))node(m[1]);
 const updates=[];let requests=[];let response;
-const context=vm.createContext({console,Option:function(label,value){this.label=label;this.value=value},document:{getElementById:node,querySelectorAll(){return [...nodes.values()]},createElement(){return new Node()}},history:{replaceState(){}},location:{hash:''},Viewport:class{reset(){} update(...x){updates.push(x)}},fetch:async(path,options)=>{requests.push({path,options});return response(path,options)}});
+const context=vm.createContext({console,DesignTools:class{sync(){}render(){}},AssetTools:class{sync(){}render(){}},ReferenceTools:class{sync(){}render(){}selected(){return [];}},Option:function(label,value){this.label=label;this.value=value},document:{getElementById:node,querySelectorAll(){return [...nodes.values()]},createElement(){return new Node()}},history:{replaceState(){}},location:{hash:''},Viewport:class{reset(){} update(...x){updates.push(x)}},fetch:async(path,options)=>{requests.push({path,options});return response(path,options)}});
 let source=fs.readFileSync(root+'/palladio/web/studio.js','utf8').replace(/^import .+;$/gm,'');
 source=source.slice(0,source.lastIndexOf('\nrender();\nrun(async'));
 vm.runInContext(fs.readFileSync(root+'/palladio/web/site-picker.js','utf8')
