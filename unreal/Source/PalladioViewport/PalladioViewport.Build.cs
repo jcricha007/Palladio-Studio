@@ -7,7 +7,7 @@ public class PalladioViewport : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PublicDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine" });
         PrivateDependencyModuleNames.AddRange(new[] {
-            "HTTP", "Json", "InputCore", "ProceduralMeshComponent"
+            "HTTP", "Json", "InputCore", "PhysicsCore", "ProceduralMeshComponent"
         });
     }
 }

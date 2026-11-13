@@ -1,4 +1,5 @@
 #include "PalladioGameMode.h"
+#include "PalladioNavigator.h"
 
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
@@ -15,7 +16,6 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
-#include "GameFramework/DefaultPawn.h"
 #include "GameFramework/PlayerController.h"
 #include "HttpModule.h"
 #include "InputCoreTypes.h"
@@ -43,7 +43,7 @@ FVector VectorField(const TSharedPtr<FJsonObject>& Object, const TCHAR* Field)
 APalladioGameMode::APalladioGameMode()
 {
     PrimaryActorTick.bCanEverTick = true;
-    DefaultPawnClass = ADefaultPawn::StaticClass();
+    DefaultPawnClass = APalladioNavigator::StaticClass();
     HUDClass = APalladioHUD::StaticClass();
 }
 
@@ -87,6 +87,8 @@ void APalladioGameMode::StartPlay()
     auto* LandscapeActor = GetWorld()->SpawnActor<AActor>();
     Terrain = NewObject<UProceduralMeshComponent>(LandscapeActor);
     LandscapeActor->SetRootComponent(Terrain);
+    Terrain->SetCollisionProfileName(TEXT("BlockAll"));
+    Terrain->bUseComplexAsSimpleCollision = true;
     Terrain->RegisterComponent();
     Terrain->SetMaterial(0, Tint(FColor::FromHex(TEXT("728455"))));
 
@@ -179,13 +181,13 @@ UMaterialInstanceDynamic* APalladioGameMode::Tint(FColor Color)
 }
 
 void APalladioGameMode::AddShape(UStaticMesh* Mesh, const FVector& Center, const FVector& Dimensions,
-    double Yaw, FColor Color, bool bSelected)
+    double Yaw, FColor Color, bool bSelected, bool bBlocksWalking)
 {
     auto* Actor = GetWorld()->SpawnActor<AStaticMeshActor>(Center, FRotator(0, Yaw, 0));
     auto* Component = Actor->GetStaticMeshComponent();
     Component->SetMobility(EComponentMobility::Movable);
     Component->SetStaticMesh(Mesh);
-    Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Component->SetCollisionProfileName(bBlocksWalking ? TEXT("BlockAll") : TEXT("NoCollision"));
     Actor->SetActorScale3D(Dimensions / Mesh->GetBoundingBox().GetSize());
     Component->SetMaterial(0, Tint(bSelected ? FColor::FromHex(TEXT("F0BC6A")) : Color));
     Shapes.Add(Actor);
@@ -220,7 +222,7 @@ void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
         Normal.Normalize();
     }
     Terrain->CreateMeshSection_LinearColor(0, Vertices, Indices, Normals,
-        TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), false);
+        TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), true);
 
     if (View->GetBoolField(TEXT("coastal")))
     {
@@ -232,7 +234,7 @@ void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
         const FVector Base = VectorField(Tree, TEXT("base_cm"));
         const double Height = Tree->GetNumberField(TEXT("height_cm"));
         AddShape(Cube, Base + FVector(0, 0, Height * .26), FVector(22, 22, Height * .52),
-            0, FColor(92, 66, 43));
+            0, FColor(92, 66, 43), false, true);
         AddShape(Cone, Base + FVector(0, 0, Height * .62), FVector(Height * .42, Height * .42, Height * .76),
             0, FColor(61, 100, 59));
     }
@@ -259,15 +261,28 @@ void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
     {
         Selection = Elements.IsEmpty() ? FString() : Elements[0]->AsObject()->GetStringField(TEXT("id"));
     }
+    FVector Focus = FVector::ZeroVector;
     if (!bBaseline)
     {
         for (const auto& Value : Elements)
         {
             const auto& Element = Value->AsObject();
-            AddShape(Cube, VectorField(Element, TEXT("center_cm")), VectorField(Element, TEXT("dimensions_cm")),
+            const FVector Center = VectorField(Element, TEXT("center_cm"));
+            const bool bSelected = Element->GetStringField(TEXT("id")) == Selection;
+            AddShape(Cube, Center, VectorField(Element, TEXT("dimensions_cm")),
                 Element->GetNumberField(TEXT("yaw_degrees")), FColor::FromHex(Element->GetStringField(TEXT("color"))),
-                Element->GetStringField(TEXT("id")) == Selection);
+                bSelected, true);
+            if (bSelected)
+            {
+                Focus = Center;
+            }
         }
+    }
+
+    auto* Player = GetWorld()->GetFirstPlayerController();
+    if (auto* Navigator = Player ? Cast<APalladioNavigator>(Player->GetPawn()) : nullptr)
+    {
+        Navigator->SetOrbitFocus(Focus);
     }
 
     const auto& Environment = View->GetObjectField(bBaseline ? TEXT("baseline_environment") : TEXT("environment"));
@@ -307,7 +322,29 @@ void APalladioGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     auto* Player = GetWorld()->GetFirstPlayerController();
-    if (!Player || bBusy)
+    if (!Player)
+    {
+        return;
+    }
+    if (auto* Navigator = Cast<APalladioNavigator>(Player->GetPawn()); Navigator && Current.IsValid())
+    {
+        if (Player->WasInputKeyJustPressed(EKeys::One))
+        {
+            Navigator->SetNavigation(EPalladioNavigation::Fly);
+            NavigationStatus.Reset();
+        }
+        else if (Player->WasInputKeyJustPressed(EKeys::Two))
+        {
+            Navigator->SetNavigation(EPalladioNavigation::Orbit);
+            NavigationStatus.Reset();
+        }
+        else if (Player->WasInputKeyJustPressed(EKeys::Three))
+        {
+            NavigationStatus = Navigator->SetNavigation(EPalladioNavigation::Walk)
+                ? FString() : FString(TEXT("No clear walking surface below the camera or at the site entrance."));
+        }
+    }
+    if (bBusy)
     {
         return;
     }
@@ -360,10 +397,13 @@ FString APalladioGameMode::Caption() const
             }
         }
     }
-    return FString::Printf(TEXT("%s  |  Revision %d  |  %s%s\n%s"),
+    const auto* Player = GetWorld()->GetFirstPlayerController();
+    const auto* Navigator = Player ? Cast<APalladioNavigator>(Player->GetPawn()) : nullptr;
+    const FString Mode = Navigator ? Navigator->NavigationLabel() : FString();
+    return FString::Printf(TEXT("%s  |  Revision %d  |  %s  |  %s%s\n%s\n%s"),
         *Current->GetStringField(TEXT("name")), Current->GetIntegerField(TEXT("revision")),
-        bBaseline ? TEXT("Original site") : TEXT("Design"), *SelectedName,
-        bBusy ? TEXT("Synchronizing...") : *Status);
+        bBaseline ? TEXT("Original site") : TEXT("Design"), *Mode, *SelectedName,
+        bBusy ? TEXT("Synchronizing...") : *Status, *NavigationStatus);
 }
 
 void APalladioHUD::DrawHUD()
@@ -372,7 +412,9 @@ void APalladioHUD::DrawHUD()
     if (const auto* Mode = GetWorld()->GetAuthGameMode<APalladioGameMode>())
     {
         DrawText(Mode->Caption(), FLinearColor::White, 20, 20, GEngine->GetSmallFont(), 1.3f);
-        DrawText(TEXT("WASD + mouse  Fly   |   Tab  Select   |   Arrows  Move 0.5 m   |   B  Original site   |   R  Reload"),
+        DrawText(TEXT("1 Fly (WASD, Q/E)   |   2 Orbit (mouse, scroll or W/S)   |   3 Walk (WASD)"),
+            FLinearColor::White, 20, Canvas->ClipY - 55, GEngine->GetSmallFont(), 1.1f);
+        DrawText(TEXT("Tab Select   |   Arrows Move 0.5 m   |   B Original site   |   R Reload"),
             FLinearColor::White, 20, Canvas->ClipY - 35, GEngine->GetSmallFont(), 1.1f);
     }
 }

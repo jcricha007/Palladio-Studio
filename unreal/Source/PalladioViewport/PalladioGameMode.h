@@ -30,7 +30,7 @@ private:
     void Display(const TSharedPtr<FJsonObject>& View);
     void MoveSelection(const FVector& DeltaMetres);
     void AddShape(UStaticMesh* Mesh, const FVector& Center, const FVector& Dimensions,
-        double Yaw, FColor Color, bool bSelected = false);
+        double Yaw, FColor Color, bool bSelected = false, bool bBlocksWalking = false);
     UMaterialInstanceDynamic* Tint(FColor Color);
 
     UPROPERTY()
@@ -51,6 +51,7 @@ private:
     FString Endpoint;
     FString Status = TEXT("Loading property...");
     FString Selection;
+    FString NavigationStatus;
     TSharedPtr<FJsonObject> Current;
     bool bBusy = false;
     bool bBaseline = false;
