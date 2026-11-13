@@ -1,5 +1,7 @@
 """Import a prepared, north-aligned elevation grid into the property frame."""
 
+from datetime import datetime
+
 from .scene import ValidationError, number, required_text
 
 
@@ -29,7 +31,7 @@ def surveyed_landscape(data):
     if max(map(abs, heights)) > 200:
         raise ValidationError("Samples must be within 200 metres of the centre elevation.")
 
-    return {
+    baseline = {
         "source": {
             "kind": "elevation grid",
             "profile": "Imported elevation",
@@ -43,3 +45,33 @@ def surveyed_landscape(data):
         "vegetation": [],
         "environment": {"weather": "clear", "hour": 16},
     }
+
+    if "acquisition" in data:
+        acquisition = data["acquisition"]
+        if not isinstance(acquisition, dict):
+            raise ValidationError("Acquisition metadata must be an object.")
+        retrieved = required_text(acquisition.get("retrieved_utc"), "Acquisition time", 80)
+        try:
+            if datetime.fromisoformat(retrieved).tzinfo is None:
+                raise ValueError("Timezone is required")
+        except ValueError as error:
+            raise ValidationError("Acquisition time must be an ISO timestamp with a timezone.") from error
+        tiles = acquisition.get("source_tiles")
+        if not isinstance(tiles, list) or not 1 <= len(tiles) <= size * size:
+            raise ValidationError("Acquisition metadata needs source tiles.")
+        validated_tiles = []
+        for tile in tiles:
+            if not isinstance(tile, dict) or type(tile.get("id")) is not int:
+                raise ValidationError("Each source tile needs a raster ID.")
+            validated_tiles.append({
+                "id": tile["id"],
+                "name": required_text(tile.get("name"), "Source tile", 200),
+                "resolution": number(tile.get("resolution"), "Source resolution", 0.0000001, 100000),
+            })
+        baseline["source"]["acquisition"] = {
+            "service": required_text(acquisition.get("service"), "Source service", 500),
+            "retrieved_utc": retrieved,
+            "sampling": required_text(acquisition.get("sampling"), "Sampling method", 200),
+            "source_tiles": validated_tiles,
+        }
+    return baseline
