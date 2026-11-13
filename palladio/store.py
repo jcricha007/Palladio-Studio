@@ -7,6 +7,8 @@ from pathlib import Path
 import sqlite3
 from uuid import uuid4
 
+from .terrain import surveyed_landscape
+
 from .scene import ValidationError, edit_scene, landscape, required_text, starter_elements
 
 
@@ -92,11 +94,13 @@ class Library:
         """, (project_id, result["revision"]))]
         return result
 
-    def create(self, name, brief, starter=False):
+    def create(self, name, brief, starter=False, *, elevation=None):
         name = required_text(name, "Property name", 100)
         if type(starter) is not bool:
             raise ValidationError("Starter pavilion must be true or false.")
-        baseline = landscape(brief)
+        if elevation is not None and starter:
+            raise ValidationError("Place buildings manually on imported terrain.")
+        baseline = landscape(brief) if elevation is None else surveyed_landscape(elevation)
         scene = {
             "environment": baseline["environment"],
             "elements": starter_elements() if starter else [],

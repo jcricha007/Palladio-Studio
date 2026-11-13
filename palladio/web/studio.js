@@ -182,7 +182,13 @@ function render() {
   const scene = baselineView ? project.baseline : project.scene;
   const items = baselineView ? [] : scene.elements;
   displayList($("scene-items"), items, selected, select, baselineView ? "Original landscape" : "No elements.");
-  $("site-profile").textContent = project.baseline.source.profile + " · Procedural site";
+  const {source, terrain} = project.baseline;
+  $("site-profile").textContent = source.kind === "elevation grid"
+    ? `${source.dataset} · ${terrain.spacing} m grid · ${source.latitude}, ${source.longitude}`
+    : source.profile + " · Procedural site";
+  $("site-profile").title = source.kind === "elevation grid"
+    ? `Centre elevation ${source.origin_elevation_m} m · ${source.vertical_datum}`
+    : "";
   $("weather").value = scene.environment.weather;
   $("hour").value = displayTime(scene.environment.hour);
   $("rain").classList.toggle("active", scene.environment.weather === "rain");
@@ -219,6 +225,37 @@ function commit(payload, revision = project.revision) {
   });
 }
 
+function updateLandscapeFields() {
+  const importing = !duplicating && $("landscape-source").value === "elevation";
+  $("landscape-brief-field").hidden = importing;
+  $("landscape-brief").required = !duplicating && !importing;
+  $("starter-field").hidden = importing;
+  $("elevation-file-field").hidden = !importing;
+  $("elevation-file").required = importing;
+}
+
+$("landscape-source").addEventListener("change", updateLandscapeFields);
+
+async function newPropertyData(name) {
+  if ($("landscape-source").value !== "elevation") {
+    return {name, brief: $("landscape-brief").value, starter: $("starter").checked};
+  }
+  const file = $("elevation-file").files[0];
+  if (!file || file.size > 950_000) {
+    throw new Error("Choose an elevation JSON file smaller than 950 KB.");
+  }
+  let elevation;
+  try {
+    elevation = JSON.parse(await file.text());
+  } catch {
+    throw new Error("The elevation file must contain valid JSON.");
+  }
+  if (!elevation || typeof elevation !== "object" || Array.isArray(elevation)) {
+    throw new Error("The elevation file must contain a JSON object.");
+  }
+  return {name, elevation};
+}
+
 function showDialog(duplicate = false) {
   showPlan();
   duplicating = duplicate;
@@ -227,7 +264,7 @@ function showDialog(duplicate = false) {
   $("dialog-title").textContent = duplicate ? "Duplicate property" : "New property";
   $("create-submit").textContent = duplicate ? "Duplicate property" : "Create property";
   $("new-fields").hidden = duplicate;
-  $("landscape-brief").required = !duplicate;
+  updateLandscapeFields();
   if (duplicate) $("property-name").value = (project.name.slice(0, 93) + " copy");
   $("property-dialog").showModal();
   $("property-name").focus();
@@ -243,7 +280,7 @@ $("property-form").addEventListener("submit", event => {
     const name = $("property-name").value;
     const next = duplicating
       ? await api(propertiesPath + "/" + project.id + "/duplicate", {name})
-      : await api(propertiesPath, {name, brief: $("landscape-brief").value, starter: $("starter").checked});
+      : await api(propertiesPath, await newPropertyData(name));
     $("property-dialog").close();
     showProject(next, true);
     await loadLibrary();

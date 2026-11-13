@@ -54,3 +54,10 @@ imports and local-model planning remain future work. The separate navigation PR 
 The Unreal developer preview loads saved terrain, vegetation, and pavilion geometry. Free flight, selection-centered orbit, and collision-aware walking share the same property view. Navigation is session-local. Element moves continue to use the existing revision history.
 
 Windows acceptance covers orbit retargeting, walking across the terrain and through the pavilion entrance, collision with walls, and revision round-trips. After that check, 0.3 starts with georeferenced elevation and source provenance.
+
+## Current 0.3 development
+
+Prepared elevation grids can seed a property with preserved relief, centre coordinates,
+vertical datum, and source attribution. Both viewports consume the saved original terrain.
+The next real-site increment is location lookup and dataset acquisition, followed by
+plausible vegetation and other surroundings where source coverage is incomplete.
