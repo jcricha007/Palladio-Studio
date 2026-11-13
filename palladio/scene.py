@@ -142,6 +142,11 @@ def edit_scene(scene, command):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if action == "assembly":
+        from .assemblies import generate_assembly
+        spec, pieces = generate_assembly(command.get("assembly"))
+        scene["elements"].extend({**piece, "id": str(uuid4())} for piece in pieces)
+        return f"Added {spec['name']} ({len(pieces)} parts)"
     if action == "add":
         item = element(command.get("element"))
         item["id"] = str(uuid4())

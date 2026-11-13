@@ -48,8 +48,8 @@ function syncControls() {
   $("frame").disabled = !viewport || !project;
   $("restore").disabled = busy || !project || baselineView || project.history.length < 2;
   for (const control of document.querySelectorAll(
-    "#prompt-form input, #prompt-form button, #apply-plan, #environment input, #environment select, " +
-    "#environment button, #add-kind, #add-element, #element input, #element select, #element button, #history",
+    "#prompt-form input, #prompt-form button, #apply-plan, #discard-plan, #environment input, #environment select, " +
+    "#environment button, #add-kind, #add-element, #element input, #element select, #element button, #history, #assembly-form input, #assembly-form select, #assembly-form button",
   )) control.disabled = busy || !project || baselineView;
   for (const button of $("properties").querySelectorAll("button")) button.disabled = busy;
 }
@@ -102,6 +102,36 @@ function showPlan(plan = null) {
   pending = plan;
   $("proposal").hidden = !plan;
   $("proposal-text").textContent = plan?.summary || "";
+  updateViewport();
+}
+
+function updateViewport() {
+  const previewElements = !baselineView && pending?.elements;
+  $("assembly-preview-badge").hidden = !previewElements;
+  if (!project || !catalog) return;
+  const viewProject = previewElements ? {
+    ...project, scene: {...project.scene, elements: [...project.scene.elements, ...previewElements]},
+  } : project;
+  viewport?.update(viewProject, baselineView, catalog.materials, selected);
+}
+
+function discardOnEdit() {
+  if (!pending) return;
+  showPlan();
+  status("Preview cleared. Preview again to review your changes.");
+}
+
+function assemblyDefaults() {
+  const template = catalog?.assemblies?.[$("assembly-kind").value];
+  if (!template) return;
+  $("assembly-name").value = template.label;
+  $("assembly-material").value = template.material;
+  for (const dimension of ["width", "height", "depth"]) {
+    const input = $("assembly-" + dimension);
+    input.value = template[dimension];
+    input.min = template.limits[dimension][0];
+    input.max = template.limits[dimension][1];
+  }
 }
 
 function select(id) {
@@ -171,12 +201,13 @@ function render() {
   $("history").replaceChildren(...(earlier.length
     ? earlier.map(entry => option(entry.number, entry.number + " · " + entry.label))
     : [option("", "No earlier revisions")]));
-  viewport?.update(project, baselineView, catalog.materials, selected);
+  updateViewport();
   syncControls();
 }
 
 function commit(payload, revision = project.revision) {
   return run(async () => {
+    showPlan();
     const next = await api(propertiesPath + "/" + project.id + "/edit", {revision, ...payload});
     const previousCount = project.scene.elements.length;
     if (payload.commands?.length === 1 && payload.commands[0].action === "add" &&
@@ -189,6 +220,7 @@ function commit(payload, revision = project.revision) {
 }
 
 function showDialog(duplicate = false) {
+  showPlan();
   duplicating = duplicate;
   $("property-form").reset();
   $("dialog-error").hidden = true;
@@ -273,7 +305,35 @@ $("prompt-form").addEventListener("submit", event => {
     status("Review the proposed edit.");
   });
 });
-$("request").addEventListener("input", () => showPlan());
+$("request").addEventListener("input", discardOnEdit);
+for (const form of ["assembly-form", "environment", "element"]) {
+  $(form).addEventListener("input", discardOnEdit);
+  $(form).addEventListener("change", discardOnEdit);
+}
+$("assembly-kind").addEventListener("change", () => {
+  discardOnEdit();
+  assemblyDefaults();
+});
+$("assembly-form").addEventListener("submit", event => {
+  event.preventDefault();
+  run(async () => {
+    showPlan();
+    const assembly = {
+      kind: $("assembly-kind").value,
+      name: $("assembly-name").value,
+      material: $("assembly-material").value,
+      width: $("assembly-width").valueAsNumber,
+      height: $("assembly-height").valueAsNumber,
+      depth: $("assembly-depth").valueAsNumber,
+      position: ["x", "y", "z"].map(axis => $("assembly-" + axis).valueAsNumber),
+      yaw: $("assembly-yaw").valueAsNumber,
+    };
+    const plan = await api(propertiesPath + "/" + project.id + "/assembly-preview", {assembly});
+    if (plan.revision !== project.revision) throw new Error("This property changed. Reopen it and preview again.");
+    showPlan(plan);
+    status("Assembly preview only. Apply to save, or Discard to return to the saved design.");
+  });
+});
 $("apply-plan").addEventListener("click", () => {
   if (pending) commit({commands: [pending.command]}, pending.revision);
 });
@@ -288,6 +348,9 @@ run(async () => {
   $("weather").replaceChildren(...catalog.weather.map(value => option(value)));
   $("material").replaceChildren(...Object.keys(catalog.materials).map(value => option(value)));
   $("add-kind").replaceChildren(...Object.keys(catalog.elements).map(value => option(value)));
+  $("assembly-kind").replaceChildren(...Object.entries(catalog.assemblies).map(([key, value]) => option(key, value.label)));
+  $("assembly-material").replaceChildren(...Object.keys(catalog.materials).map(value => option(value)));
+  assemblyDefaults();
   const projects = await loadLibrary();
   const remembered = projects.find(item => "#" + item.id === location.hash);
   const first = remembered || projects[0];

@@ -19,6 +19,17 @@ Store a versioned property model independently of the renderer. Use stable IDs f
 
 Manual controls and agent proposals use the same command interface. Validate commands against the active scene revision, commit each edit batch atomically, and keep restore points. The local model will propose structured commands, with deterministic tools handling geometry, placement, materials, and saving.
 
+## Architecture assembly increment
+
+Room and garage shells with genuine door gaps and window wall segmentation, plus simple
+dining and lounge furnishings, now use the same revision-safe command path as individual
+parts. Browser previews are unsaved; Apply commits all parts atomically. Both renderers
+consume the generated editable elements. This is an early 0.4 building block, not completion
+of that milestone or the intervening real-site work. Assemblies do not remain parametric
+groups after insertion, and arbitrary openings, stair generation, detailed assets, terrain
+imports and local-model planning remain future work. The separate navigation PR continues
+0.2 without changes to its Unreal code in this increment.
+
 ## Milestones
 
 | Milestone | Build | Acceptance |

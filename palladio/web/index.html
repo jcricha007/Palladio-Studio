@@ -26,6 +26,7 @@
       <div class="viewport">
         <canvas id="view" aria-label="3D property preview"></canvas>
         <div id="rain" aria-hidden="true"></div>
+        <div id="assembly-preview-badge" hidden role="status">Assembly preview · Not saved</div>
         <div class="view-top">
           <div role="group" aria-label="Scene view" class="switch">
             <button type="button" id="design-view" aria-pressed="true">Design</button>
@@ -65,6 +66,33 @@
           <label>Weather<select id="weather"></select></label>
           <label>Time of day<input id="hour" type="time" step="60" required></label>
           <button type="submit">Update environment</button>
+        </form>
+        <hr>
+        <h2>Assembly builder</h2>
+        <form id="assembly-form" class="stack">
+          <p class="muted">Preview simple room shells and furnishing sets, then save their editable pieces together.</p>
+          <label>Assembly<select id="assembly-kind"></select></label>
+          <label>Name<input id="assembly-name" maxlength="60" required></label>
+          <fieldset>
+            <legend>Dimensions in metres</legend>
+            <div class="triplet">
+              <label>Width<input id="assembly-width" type="number" step="any" min="0.05" max="100" required></label>
+              <label>Height<input id="assembly-height" type="number" step="any" min="0.05" max="100" required></label>
+              <label>Depth<input id="assembly-depth" type="number" step="any" min="0.05" max="100" required></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Position in metres · Y is up</legend>
+            <div class="triplet">
+              <label>X<input id="assembly-x" type="number" step="any" value="0" min="-900" max="900" required></label>
+              <label>Y<input id="assembly-y" type="number" step="any" value="0" min="-900" max="900" required></label>
+              <label>Z<input id="assembly-z" type="number" step="any" value="0" min="-900" max="900" required></label>
+            </div>
+          </fieldset>
+          <label>Rotation in degrees<input id="assembly-yaw" type="number" step="any" value="0" min="-360" max="360" required></label>
+          <label>Primary material<select id="assembly-material"></select></label>
+          <button type="submit">Preview assembly</button>
+          <p class="muted">Shell height is clear interior height; Y is the floor bottom. Placement does not follow terrain automatically. Preview does not save. Use Apply below the scene to commit one revision. Pieces remain individually editable; these are design studies, not construction documents.</p>
         </form>
         <hr>
         <h2>Elements</h2>
