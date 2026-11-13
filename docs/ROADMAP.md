@@ -1,97 +1,134 @@
-# Palladio Studio design roadmap
+# Palladio Studio build roadmap
 
-## Product definition
+Updated 13 November 2026 after [PR #7](https://github.com/jcricha007/Palladio-Studio/pull/7)
+merged into `main` at `05e3515`. This roadmap distinguishes implemented capabilities,
+observed validation, and planned work. Milestone numbers describe product areas that can
+advance together. A merged increment does not close every acceptance item in its area.
 
-Open one persistent property at a time. Start from a described setting or a real-world address or coordinates, then design the property from its terrain and architecture down to furnishings, vehicles, lighting, weather, and material grain. Keep many independent properties and branch a design when exploring alternatives.
+## Product goal
 
-**Realistic interpretation** is the default for a real location. Preserve recognizable terrain, shoreline, roads, and other supported features. Fill gaps with plausible vegetation, surface materials, or surroundings. Record the source and resolution of observed inputs and identify inferred or generated content. Save the starting environment as an immutable baseline so the user can compare it with the design and, as terrain editing matures, restore features selectively.
+Work on one persistent, highly detailed property at a time, with a library of independent
+properties and design alternatives. Start from a described landscape or a real-world
+location, then develop the architecture, interiors, grounds, furnishings, vehicles,
+materials, lighting, and weather. Manual tools and a local design agent operate on the
+same saved property.
 
-## Creation engine
+For real locations, prioritize a realistic interpretation that preserves the site's
+character. Record which terrain and features come from sources and which are inferred or
+generated. Keep the starting environment as an immutable baseline for comparison and
+restoration. Fine detail and long design briefs remain the goal as the current prototype's
+geometry, input limits, and performance mature.
 
-| Method | Examples | Editable state |
+## What is implemented on main
+
+| Area | Implemented capability | State and remaining work |
 | --- | --- | --- |
-| Parametric components | Walls, floors, roofs, windows, stairs, cabinetry | Dimensions, profiles, material slots, openings, and attachments |
-| Procedural geometry and placement | Custom massing, landforms, retaining walls, paths, planting | Curves, footprints, terrain layers, constraints, and generation seeds |
-| Imported or authored assets | Furniture, vehicles, fixtures, trees, decorative objects | Stable asset reference, transform, variants, and material overrides |
-| Material and atmosphere controls | Oak grain, stone veining, concrete finish, mist, rain, dusk | Scale, orientation, color, roughness, maps, and environmental parameters |
+| **0.1 · Property foundation** | Local SQLite property library, three procedural landscape profiles, editable pavilion and simple elements, browser orbit view, atmosphere controls, original-site comparison, duplication and revision restore. | Foundation implemented in [PR #1](https://github.com/jcricha007/Palladio-Studio/pull/1). Preserve old properties and history as the model expands. |
+| **0.2 · Unreal and Windows** | UE 5.7 developer launcher, shared terrain/element projection, fly/orbit/walk navigation, element selection and saved movement. | [PR #2](https://github.com/jcricha007/Palladio-Studio/pull/2) and [PR #3](https://github.com/jcricha007/Palladio-Studio/pull/3) merged. Initial Windows scene load confirmed. Full navigation, collision and imported-terrain acceptance remain open. |
+| **0.3 · Real and imagined sites** | Prepared elevation JSON import, U.S. address lookup, coordinates, downloaded terrain preview, source details, immutable download snapshots and offline cache reuse. Saved properties contain their terrain. | Acquisition implemented through [PR #6](https://github.com/jcricha007/Palladio-Studio/pull/6) and [PR #7](https://github.com/jcricha007/Palladio-Studio/pull/7). Terrain modification, richer surroundings and additional import formats remain planned. |
+| **0.4 · Architecture and detail** | Configurable room and garage shells with openings, dining and lounge presets, preview/Apply and individual editing of generated pieces. | [PR #4](https://github.com/jcricha007/Palladio-Studio/pull/4) merged. Assemblies currently become independent pieces. Persistent groups, ground placement, richer building tools, detailed assets and materials remain planned. |
+| **0.5 · Local agent and references** | Built-in commands, local Ollama model discovery/switching, selection-aware context, validated edit previews, cancellation and revision-checked Apply. | [PR #5](https://github.com/jcricha007/Palladio-Studio/pull/5) is integrated into `main` through PR #7. Real model evaluation, broader scene queries, photo/sketch references and native Unreal agent controls remain open. |
+| **0.6 · Long design jobs** | Atomic edit batches and saved revisions provide the underlying persistence mechanisms. | Jobs are planned. Persistent briefs, decomposition, progress, pause/resume and reconciliation with manual edits are not implemented. |
 
-Store a versioned property model independently of the renderer. Use stable IDs for scene elements and local metres with Y up in the prototype. The Unreal adapter converts axes and scale at its boundary. Store a real site's georeference alongside the local scene so geographic imports can align without large renderer coordinates. Keep external assets and references addressable by stable identifiers and preserve provenance alongside them.
+The current connected workflow is to create a site, preview an assembly or agent proposal,
+apply it to a saved revision, and open the same property in Unreal. Restore and duplication
+support experimentation without replacing the original site.
 
-Manual controls and agent proposals use the same command interface. Validate commands against the active scene revision, commit each edit batch atomically, and keep restore points. The local model proposes structured commands, with deterministic tools handling geometry, placement, materials, and saving.
+## Evidence and remaining acceptance
 
-## Roadmap review after the real-site package
+| Check | Recorded result |
+| --- | --- |
+| Python regression suite for the implementation merged in PR #7 | **37 tests passed.** Covers property persistence, revisions, assemblies, elevation, cache refresh/offline reuse, HTTP preview/save, Unreal scene projection and the local-agent contract. |
+| JavaScript state suites for PR #7 | **All three suites passed.** Assembly, agent and site-picker controls use DOM/viewport doubles, including cancellation and late responses. JavaScript syntax and diff checks also passed. |
+| Public data services | Live 289-sample USGS download at 35.6, -82.6 with a 128 m site width succeeded, followed by a cache hit. The Census documentation's example address lookup succeeded. |
+| Windows Unreal | John confirmed the earlier build compiled and its scene loaded. Later navigation and downloaded-terrain walkthroughs have no recorded acceptance yet. |
+| Browser rendering | Pending visual acceptance. The development environment could not launch local Chromium or connect its separate cloud browser to the local server. |
+| Real Ollama runtime | Pending installed-model switching, edit quality, latency and VRAM checks alongside Unreal on the Windows workstation. Automated transport tests use a fake runtime. |
 
-| Stage | Available in this branch | Remaining acceptance or development |
+The test results above are carried forward from PR #7. This roadmap refresh changes
+documentation only and does not claim another application test run.
+
+To close the current user acceptance items:
+
+1. Create the Blue Ridge reference at latitude **35.6**, longitude **-82.6**, width **128 m**.
+   Inspect its preview and source details, edit its atmosphere, compare the original site,
+   duplicate it, then restart offline and reopen the saved property.
+2. Open the same property in Unreal. Check scale, orientation and atmosphere. Verify
+   flight, selection-centred orbit, walking on slopes and through a shell doorway, wall
+   collision, and a saved element move visible in the browser.
+3. With Ollama running locally, choose an installed model, preview a selected-object edit,
+   apply it once and restore the prior revision. Check cancellation and switching models.
+   Record response quality, latency, frame time and VRAM use before choosing a default model.
+
+Run local checks using the commands in [the README](../README.md#develop). Keep hosted CI
+disabled until its use is requested.
+
+## Current boundaries
+
+- Downloaded sites use a **17 × 17** ground-elevation grid over **20–256 m**. A 128 m site
+  has 8 m sample spacing. Prepared JSON imports support odd grids of 3–129 samples per side
+  within the same extent limit. The studio's spacing and the source's pixel size are distinct.
+- U.S. address matches are approximate. Source tiles and acquisition metadata are retained,
+  while the vertical datum needs checking against the source tiles. Parcel boundaries,
+  existing buildings, aerial textures and inferred vegetation are not acquired automatically.
+- Current architecture and furnishings are schematic geometry. Pieces can be edited, but
+  resizing one wall does not resize its former room. Placement neither snaps to the ground
+  nor resolves overlaps. Materials are basic swatches and the Unreal atmosphere is preliminary.
+- The agent handles bounded, single-turn proposals with up to 12 commands and context for
+  up to 40 elements. Photo input, unrestricted whole-property reasoning and long autonomous
+  jobs are future capabilities. Preview cancellation ignores late replies but may leave an
+  already-started download or model request finishing in the background.
+
+## Next package: persistent assemblies and terrain placement
+
+**Outcome:** create a room or garage on a real site, then resize, move, rotate or duplicate
+the whole assembly while preserving its identity, history and matching geometry in both
+viewports.
+
+| Work item | Required behaviour |
+| --- | --- |
+| Persistent assembly model | Store assembly identity, generator parameters and child relationships. Keep generated part identities stable where their roles survive a resize. Open existing properties and revisions with their independent elements intact. |
+| Group selection and editing | Select an assembly, inspect its parameters, and preview whole-group transforms, duplication or removal. Define how individual part edits become overrides or detached pieces so regeneration cannot silently erase them. |
+| Parametric shell edits | Regenerate room/garage width, depth and height after insertion. Add validated controls for the existing doorway and window openings. Treat stairs, arbitrary roof systems and detailed joinery as subsequent building tools. |
+| Ground placement | Query height from the same terrain surface shown by the renderers. Provide explicit placement and vertical offset, with feedback for a footprint intersecting terrain or extending outside coverage. Preserve the site's original terrain. |
+| Shared command path | Use the same validated, revision-aware commands for manual controls and agent proposals. Project the result into Unreal and handle its element-move path consistently with group ownership. |
+| Compatibility and acceptance | Test old property loading, preview/discard, group identity, member-edit policy, stale revisions, duplication, restore, offline reopen and browser/Unreal agreement. |
+
+Acceptance is a garage placed on the downloaded Blue Ridge site, resized and rotated as
+one object, duplicated as an alternative, restored to an earlier revision and reopened
+offline. The original terrain remains unchanged and unsupported placement is visible
+before Apply. These requirements guide the next implementation PR; this roadmap update
+does not implement them.
+
+## Packages after that
+
+| Order | Package | User-visible result and completion check |
 | --- | --- | --- |
-| **0.1 · Property foundation** | Saved independent properties, three procedural landscape profiles, editable elements, baseline comparison, duplication and revision restore. | Preserve these behaviours as the scene model grows. |
-| **0.2 · Unreal and Windows** | UE 5.7 developer launch, shared scene projection, fly/orbit/walk navigation and revision-aware element moves. The initial Windows scene load has been confirmed. | Complete the navigation and imported-terrain walkthrough checks. Improve materials, atmosphere and packaging. |
-| **0.3 · Real and imagined sites** | Prepared elevation JSON import, U.S. address lookup, coordinate-based USGS terrain preview, source attribution and an offline download cache. | Editable terrain layers, paths and planting, shoreline handling, richer procedural sites and wider import formats. |
-| **0.4 · Architecture and detail** | Room and garage shells with openings, dining and lounge presets, and individually editable pieces. | Persistent parametric groups, configurable openings, stairs and roofs, placement tools, imported furnishings/vehicles and detailed materials. |
-| **0.5 · Local agent and references** | Built-in commands and switchable local Ollama models, bounded selection-aware context, validated proposal previews and explicit Apply. | Real model quality/VRAM measurements, broader scene queries, attached photos and sketches, and a native Unreal agent panel. |
-| **0.6 · Long design jobs** | Revision-safe batches provide the persistence foundation. | Persistent briefs, decomposition, dependencies, progress, pause/resume and reconciliation with manual edits. |
+| 2 | **Building and landscape tools** | Extend openings, roofs, stairs and room layouts. Add revisioned terrain modifications, paths, drives, planting and water/shoreline treatment. Build a coherent home and approach, then restore the original ground independently of the architecture. Keep source-backed and generated surroundings identifiable. |
+| 3 | **Materials, assets and atmosphere** | Add persistent asset references and import for furnishings, fixtures, trees and vehicles. Add texture maps, roughness, material scale/orientation and richer Unreal lighting/weather. Reopen a furnished property with the same assets and finishes, including deliberate wood-grain direction. |
+| 4 | **Reference-guided local agent** | Expand scene queries and target resolution, evaluate local models, and attach photos or sketches with chosen design cues. Preview a reference-driven material or proportion change on the intended element and restore it. Surface missing context and unsupported requests. |
+| 5 | **Long design jobs** | Retain the complete brief and references, decompose work, track prerequisites and validate each batch. Show progress, checkpoint, pause/resume and reconcile intervening manual edits. Complete a house/interior/landscape brief without losing changes made while paused. |
 
-These stages overlap. The room presets and single-turn agent are early parts of later
-stages. They do not make detailed architectural modelling or autonomous design complete.
+Each package may be delivered through several focused PRs. Detailed tools should become
+available to manual editing before the agent is expected to operate them. Add agent commands
+as those tools gain validation and preview support.
 
-## This upgrade package
+## Architecture and delivery rules
 
-Connect the existing terrain, assembly and agent work into one branch based on current
-`main`. The local-agent PR was merged into the older assembly branch after that branch's
-original PR reached `main`. This package brings that work into the current application
-while preserving the merged navigation and elevation import.
+- Keep the property model independent of its renderers. Use stable IDs and local metres with
+  Y up. For imported sites, +X is east, +Z is south and the centre elevation is local zero.
+  Convert to Unreal centimetres and Z up only at the adapter boundary.
+- Preserve source metadata and immutable baselines. Store future terrain changes as design
+  state so original-site comparison and selective restoration remain possible.
+- Validate edits on the active revision, commit each batch atomically and retain restore
+  points. Plan compatible schema changes and recovery before adding new persistent structures.
+- Keep the local planner replaceable. Manual controls and agent tools share the same command
+  contract. Quick edits remain reviewable; long briefs retain requirements outside a single
+  model context window and resume against the latest scene revision.
+- Develop Windows delivery alongside features: a repeatable fresh-terminal launch, stable
+  property storage, useful errors, backups/export, and eventually a packaged application.
+  Maintain local regression checks and browser/Unreal acceptance as separate evidence.
 
-The real-site workflow accepts coordinates or an explicitly selected Census address match,
-previews a 17 × 17 USGS elevation grid, and saves the reviewed terrain as an immutable
-baseline. Each saved source carries its coordinates, sample spacing, source-tile identities,
-service-reported pixel sizes and acquisition time. The user can reuse cached downloads,
-refresh them without changing prior previews, and reopen saved sites offline.
-
-This is ground-elevation acquisition. It does not identify property boundaries, existing
-buildings or vegetation. Address matches are approximate, and the source tile's vertical
-datum remains a verification item. Design geometry continues to use local metres with
-+X east, +Z south and the centre elevation as zero.
-
-Acceptance for this package is to create the Blue Ridge reference at 35.6, -82.6 with a
-128 m width, inspect its source details, edit and duplicate it, compare its original site,
-and reopen it offline. Open that property in Unreal and verify the terrain, orientation and
-saved atmosphere. Download cancellation, invalid coverage and stale edits must leave the
-property library unchanged. Separately verify local model selection and preview/Apply with
-Ollama running on the Windows workstation.
-
-## Recommended next packages
-
-1. **Architectural editing and site placement.** Keep room and garage assemblies as
-   persistent editable groups. Add regeneratable dimensions and openings, group selection,
-   duplication and transforms, terrain height queries, and explicit ground placement.
-   Acceptance is to resize a furnished shell and place it on imported terrain while keeping
-   group identity, undo history and both viewports consistent.
-2. **Landscape and visual detail.** Add revisioned terrain modifications, paths, planting,
-   an asset library for furniture and vehicles, and material maps with scale/orientation.
-   Acceptance is a furnished home, garage and landscaped approach that reopens with the same
-   materials and supports a continuous walkthrough.
-3. **Reference-guided local agent.** Expand scene queries and local-model measurements, then
-   attach reference photos and sketches with user-selected design cues. Acceptance is a
-   selection-specific material or proportion change that can be previewed and restored.
-4. **Long design jobs.** Retain the full brief, plan dependencies, and checkpoint each batch.
-   Acceptance is a house/interior/landscape job that can pause for a manual edit and resume
-   against the new revision without losing it.
-
-## Agent behavior
-
-- Quick requests resolve the intended object and apply a validated, reversible edit. Show a preview or ask a focused question when the target or result is ambiguous.
-- Large requests retain the full brief and references, extract requirements, then give each planning step the relevant constraints and scene context. This lets long requests exceed a single model context window.
-- Run long jobs in reviewable batches with visible progress. Save the current revision and unresolved requirements at each checkpoint. On resume, reconcile manual changes before executing dependent work.
-- Place large replacements in a new design version. Request confirmation before permanently deleting project data. Surface unsupported requests and missing assets explicitly.
-- Benchmark local inference while the Unreal viewport is running on the target Windows workstation with its RTX 4090. Measure edit latency, frame time, VRAM use, and how often plans need correction before choosing a default model and quality preset.
-
-## Verification status for this package
-
-Python tests cover terrain validation, immutable downloads, offline cache reuse, HTTP
-preview/save, source persistence, revisions, duplication, Unreal projection, and the local
-agent contract. Node tests use DOM/viewport doubles for assembly, agent and site-picker state,
-including cancellation and late responses. A live 289-sample Blue Ridge download, cache reuse,
-and the Census documentation's example address lookup were checked successfully.
-
-Browser rendering, Windows Unreal navigation on the downloaded site, and real Ollama model
-quality remain manual acceptance work. The automated checks do not substitute for those
-checks. Keep hosted CI disabled and run the repository's local Python and Node commands.
+The broader walkthrough target is a furnished home, garage and landscaped approach on a
+recognizable site, with detailed materials and atmosphere, reliable persistence, and both
+manual and agent-driven editing. Closing that target requires the remaining work above.
