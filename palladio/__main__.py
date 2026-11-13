@@ -8,9 +8,10 @@ import re
 from urllib.parse import urlsplit
 import webbrowser
 
-from .agent import preview
+from .local_agent import AgentError, AgentService, OllamaPlanner
 from .assemblies import ASSEMBLIES, assembly_preview
 from .scene import ELEMENTS, MATERIALS, WEATHER, ValidationError
+from .sites import SiteError, SiteService
 from .store import Library, MissingProject, RevisionConflict
 
 from .unreal import unreal_view
@@ -19,13 +20,16 @@ WEB = Path(__file__).with_name("web")
 STATIC = {
     "/": ("index.html", "text/html"),
     "/studio.css": ("studio.css", "text/css"),
+    "/site-picker.js": ("site-picker.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
 }
 PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview|assembly-preview|unreal))?")
 
 
-def handler_for(library):
+def handler_for(library, agent=None, sites=None):
+    agent = agent or AgentService()
+    sites = sites or SiteService(library.path.parent / (library.path.stem + "-sites"))
     class Handler(BaseHTTPRequestHandler):
         def respond(self, status, content_type, body):
             self.send_response(status)
@@ -36,7 +40,10 @@ def handler_for(library):
             self.send_header("Content-Security-Policy",
                              "default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
             self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass  # A cancelled preview must never become a server error or edit.
 
         def json_response(self, status, value):
             self.respond(status, "application/json", json.dumps(value).encode())
@@ -55,6 +62,9 @@ def handler_for(library):
             if path in STATIC:
                 filename, content_type = STATIC[path]
                 self.respond(200, content_type, (WEB / filename).read_bytes())
+                return
+            if path == "/api/agent":
+                self.json_response(200, agent.describe())
                 return
             if path == "/api/catalog":
                 self.json_response(200, {"elements": ELEMENTS, "materials": MATERIALS, "weather": WEATHER, "assemblies": ASSEMBLIES})
@@ -96,10 +106,27 @@ def handler_for(library):
             path = urlsplit(self.path).path
             try:
                 data = self.read_json()
+                if path == "/api/agent/models":
+                    self.json_response(200, agent.models())
+                    return
+                if path == "/api/sites/lookup":
+                    self.json_response(200, sites.lookup(data.get("address")))
+                    return
+                if path == "/api/sites/preview":
+                    self.json_response(200, sites.preview(
+                        data.get("latitude"), data.get("longitude"),
+                        data.get("span_m", 128), data.get("refresh", False),
+                    ))
+                    return
                 if path == "/api/properties":
+                    elevation = data.get("elevation")
+                    if "site_key" in data:
+                        if elevation is not None:
+                            raise ValidationError("Choose a single terrain source.")
+                        elevation = sites.load(data["site_key"])
                     result = library.create(
                         data.get("name"), data.get("brief"), data.get("starter", False),
-                        elevation=data.get("elevation"),
+                        elevation=elevation,
                     )
                     self.json_response(201, result)
                     return
@@ -113,9 +140,19 @@ def handler_for(library):
                 elif match and match[2] == "assembly-preview":
                     self.json_response(200, assembly_preview(library.get(match[1]), data.get("assembly")))
                 elif match and match[2] == "preview":
-                    self.json_response(200, preview(library.get(match[1]), data.get("prompt"), data.get("selection")))
+                    project = library.get(match[1])
+                    plan = agent.preview(project, data.get("prompt"), data.get("selection"),
+                                         provider=data.get("provider", "rules"), model=data.get("model"),
+                                         revision=data.get("revision"))
+                    if library.get(match[1])["revision"] != plan["revision"]:
+                        raise RevisionConflict("This property changed while the agent was planning. Reload it and preview again.")
+                    self.json_response(200, plan)
                 else:
                     self.json_response(404, {"error": "Route not found."})
+            except SiteError as error:
+                self.json_response(502, {"error": str(error)})
+            except AgentError as error:
+                self.json_response(error.status, {"error": str(error)})
             except ValidationError as error:
                 self.json_response(400, {"error": str(error)})
             except MissingProject as error:
@@ -131,9 +168,15 @@ def main():
     parser.add_argument("--port", default=8765, type=int)
     parser.add_argument("--library", default=Path(".palladio/properties.sqlite3"), type=Path)
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--ollama-port", default=11434, type=int,
+                        help="Local Ollama port on 127.0.0.1 (no remote endpoints).")
     arguments = parser.parse_args()
     library = Library(arguments.library)
-    with ThreadingHTTPServer(("127.0.0.1", arguments.port), handler_for(library)) as server:
+    try:
+        agent = AgentService(OllamaPlanner(port=arguments.ollama_port))
+    except ValueError as error:
+        parser.error(str(error))
+    with ThreadingHTTPServer(("127.0.0.1", arguments.port), handler_for(library, agent)) as server:
         address = f"http://127.0.0.1:{server.server_port}"
         print(f"Palladio Studio is running at {address}", flush=True)
         print(f"Property library: {library.path}", flush=True)

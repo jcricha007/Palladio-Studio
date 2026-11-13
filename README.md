@@ -2,7 +2,7 @@
 
 Palladio Studio is a local-first architectural sandbox for creating and revisiting deeply detailed 3D properties. Each project contains one site and its buildings, interiors, landscaping, furnishings, materials, and atmosphere. The long-term application pairs a Windows Unreal Engine viewport with manual editing and a local design agent.
 
-## Run the first build
+## Run the studio
 
 Use Python 3.11 or newer and a browser with WebGL. From PowerShell:
 
@@ -57,19 +57,25 @@ The preview uses basic material colors and simple sunlight and fog. Richer weath
 
 ## Current scope
 
-The 0.1 foundation includes three procedural site profiles, a WebGL orbit viewport, basic box-based architectural elements, material swatches, simple atmosphere controls, project duplication, and revision history. Prompts use a small rule-based adapter that exercises the same validated command interface as the manual tools. The Unreal developer preview opens the same saved properties and commits element moves to the same revision history. Real-world terrain imports, visual references, and local-model planning are later milestones.
+The studio includes procedural landscapes, imported and downloaded elevation, a WebGL orbit viewport, editable architectural pieces and four assemblies, material swatches, atmosphere controls, property duplication, and revision history. The Unreal developer preview opens the same saved properties and commits element moves to the same history. Built-in commands and an optional local Ollama adapter propose edits through the shared command interface. Detailed materials and assets, persistent parametric assemblies, visual references, terrain editing, and autonomous design jobs remain on the roadmap.
 
 ## Develop
 
 ```powershell
 py -m unittest discover -s tests -v
+node tests/test_assembly_ui.cjs
+node tests/test_agent_ui.cjs
+node tests/test_site_ui.cjs
 ```
 
 | Path | Responsibility |
 | --- | --- |
 | `palladio/scene.py` | Procedural site generation, element definitions, and validated scene commands |
 | `palladio/store.py` | Local property library, immutable baselines, and transactional revisions |
-| `palladio/agent.py` | Prompt-to-command preview adapter |
+| `palladio/agent.py` | Built-in deterministic prompt adapter |
+| `palladio/local_agent.py` | Local Ollama transport, planner contract, bounded context and strict proposal validation |
+| `palladio/terrain.py` | Elevation-grid and source-metadata validation |
+| `palladio/sites.py` | U.S. address lookup, USGS elevation sampling, and immutable download cache |
 | `palladio/__main__.py` | Loopback application server and JSON interface |
 | `palladio/web/` | Property workspace, inspector, and WebGL renderer |
 | `palladio/unreal.py` | Scene projection from local metres and Y up into Unreal centimetres and Z up |
@@ -113,6 +119,44 @@ node tests/test_assembly_ui.cjs
 The Node check uses a small DOM/viewport test double to check preview state and edit flows.
 It is not a substitute for browser rendering or Windows Unreal acceptance.
 
+## Create a property from a real U.S. location
+
+1. Choose **New property → Real U.S. location** and name the property. Enter latitude and
+   longitude, or use **Look up address** and explicitly select a matching U.S. street address.
+   Check the coordinates before proceeding. Address matches are approximate.
+2. Set the site width from 20 to 256 metres and click **Preview terrain**. Try latitude
+   `35.6`, longitude `-82.6`, width `128` for a Blue Ridge reference site. Orbit the preview
+   and inspect its elevation range and source details.
+3. Click **Create property** to save that exact grid as the original site. Changing the
+   coordinates or width clears the preview and requires another download or cache lookup.
+4. Add architecture using the existing tools. Use **Site source** in the inspector to see
+   the recorded coordinates, sample spacing, source tiles, and acquisition time. Open the
+   same property in Unreal using the Windows launcher above.
+5. Restart Palladio without a network connection and reopen the saved property. Its terrain
+   and source details live in the property database and need no further downloads.
+
+Address lookup sends the address to the [U.S. Census geocoder](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html).
+Terrain preview sends coordinates to the [USGS 3DEP elevation service](https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer).
+Neither service requires an API key. Downloaded terrain uses a 17 × 17 grid in a local
+metre-based frame. A 128 m site has 8 m sample spacing. Source pixel resolution and the
+studio's sample spacing are separate quantities. The source tile names and service-reported
+pixel sizes are retained. The vertical datum must be verified against the listed source
+tiles before using heights for measured design work.
+
+Downloads are cached beside the database, by default in `.palladio/properties-sites`.
+Repeating a preview for the same coordinates and width reuses the cache. **Download fresh
+elevation** acquires a new snapshot while preserving any previously reviewed snapshot.
+Previewing creates no property. **Cancel request** ignores a late reply, though the server
+may finish caching the download. Missing or invalid coverage produces an error without
+saving a partial property. This increment provides bare ground relief. Buildings, parcel
+boundaries, aerial textures, vegetation inference, and direct GeoTIFF import remain future work.
+
+For Windows acceptance, create the Blue Ridge reference above, edit its atmosphere, compare
+**Original site**, duplicate it, and reopen it after restarting offline. Check the same
+property in Unreal. Also preview a location and cancel before creating it, confirming that
+the property list is unchanged. Run the Python and Node checks from **Develop** before
+testing the live provider or viewport.
+
 ## Import an elevation grid
 
 Choose **New property → Import elevation grid** and upload a prepared JSON file. Try
@@ -129,5 +173,73 @@ saved with the property. The import expects a grid already projected onto a loca
 metre-based plane.
 
 Imported properties start with bare terrain. Place buildings manually using the local
-height of the ground. Address lookup, direct GeoTIFF import, and inferred vegetation and
-surroundings are later steps.
+height of the ground. Use **Real U.S. location** for direct elevation downloads. Direct
+GeoTIFF import and inferred vegetation and surroundings are later steps.
+
+## Local agent and in-app model switching
+
+The **Agent** panel keeps **Built-in commands** available without any AI runtime. Choose
+**Local Ollama** to use a separately installed, running Ollama server on this computer.
+Palladio does not install Ollama, download models, send prompts to a hosted API, or store keys.
+Install a chat model yourself using [Ollama's documentation](https://docs.ollama.com/quickstart).
+For a strict offline runtime, disable Ollama cloud features (`OLLAMA_NO_CLOUD=1`) and restart
+Ollama; see [Ollama's FAQ](https://docs.ollama.com/faq). Palladio additionally rejects cloud
+names/remote aliases and requires local weight metadata before sending scene context.
+
+1. Start Palladio normally and open a property. Choose **Local Ollama**, click **Refresh
+   models**, and explicitly choose an installed model. Switch models in the same selector
+   whenever you want; the last local model choice is remembered by this browser.
+2. Select a scene element and try `Make the selected wall 4 metres wide and use oak`, or
+   try `Add a 6 by 8 metre garage at x 15, z 0; leave existing objects alone`.
+3. Click **Preview request**. Read the proposal, inspect its validated commands and temporary
+   scene, then **Apply** or **Discard**. A response with no commands is informational and
+   cannot be applied. Unsupported or invalid plans fail without saving anything.
+4. Confirm Apply advances History once. Restore the previous revision to undo the whole
+   batch. In the separate Unreal viewport, press **R** to load the committed result.
+5. Change provider, model, prompt, selection or property to discard a pending proposal.
+   **Cancel** discards the browser request and prevents a late result from being applied;
+   it does not guarantee the model runtime stops generating immediately.
+
+The connection is fixed to `127.0.0.1:11434`; use `py -m palladio --ollama-port 11435`
+for another local port. There is intentionally no arbitrary remote endpoint field.
+An unavailable runtime leaves manual editing and Built-in commands usable. Only one model
+request runs at a time; retry after the prior request finishes if the app reports busy.
+The transport uses a 120-second socket inactivity timeout, not an absolute job deadline.
+
+### What this increment actually does
+
+A replaceable planner receives the prompt, current revision, selection, environment,
+material/assembly catalogs, and a bounded scene excerpt (up to 40 elements, selected first,
+then nearby). It returns schema-constrained JSON, not executable code. Every command is
+checked against the allowlist and existing scene validators on a private copy. Only explicit
+Apply uses the existing revision-checked transaction. A concurrent edit invalidates the
+proposal rather than overwriting it. Existing-object edits can target only IDs included in
+the supplied excerpt. Full-scene reasoning is not promised; context is character-bounded,
+not token-counted, so a runtime may still truncate an unusually large/non-ASCII request.
+
+Supported commands: add/update/remove simple elements, add the four existing assemblies,
+and change atmosphere. A proposal can contain at most 12 commands. Newly added objects
+cannot be referred to by ID later in the same proposal. Model-generated geometry uses the
+same schematic assets as manual editing, not photorealistic generation. No images, shell
+execution, arbitrary Python, filesystem tools, automatic saves, model installation, autonomous
+jobs, or native Unreal agent panel are included. Browser model selection does not change the
+renderer. A model can still misunderstand intent, so inspect the preview before applying.
+
+No default model is imposed. Gemma/Ministral candidates can be compared after installing
+compatible Ollama models; quality, latency and VRAM alongside Unreal need measurement on the
+Windows workstation. The adapter requests model unloading after each reply (`keep_alive: 0`)
+to avoid keeping switched models resident, at the cost of cold-start latency. That does not
+guarantee a model fits in available VRAM during generation.
+
+Developer checks (no hosted CI required):
+
+```powershell
+py -m unittest discover -s tests -v
+node tests/test_assembly_ui.cjs
+node tests/test_agent_ui.cjs
+```
+
+Agent tests use a fake loopback Ollama server to verify model switching, wire payloads,
+remote-model rejection, malformed output, stale revisions, atomic edits, timeout errors and
+no-save previews. DOM tests cover controls and late-response cancellation. These tests do
+not benchmark real model quality, Windows/Unreal performance, or browser rendering.

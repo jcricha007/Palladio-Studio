@@ -26,7 +26,7 @@
       <div class="viewport">
         <canvas id="view" aria-label="3D property preview"></canvas>
         <div id="rain" aria-hidden="true"></div>
-        <div id="assembly-preview-badge" hidden role="status">Assembly preview · Not saved</div>
+        <div id="assembly-preview-badge" hidden role="status">Preview · Not saved</div>
         <div class="view-top">
           <div role="group" aria-label="Scene view" class="switch">
             <button type="button" id="design-view" aria-pressed="true">Design</button>
@@ -45,15 +45,31 @@
         </div>
       </div>
       <div class="prompt">
+        <div class="agent-settings" aria-label="Agent connection">
+          <label>Agent<select id="agent-provider"><option value="rules">Built-in commands</option><option value="ollama">Local Ollama</option></select></label>
+          <label id="agent-model-label" hidden>Installed model<select id="agent-model"><option value="">Choose an installed model</option></select></label>
+          <button id="refresh-models" type="button" hidden>Refresh models</button>
+        </div>
+        <p id="agent-status" class="muted" role="status" aria-live="polite">Built-in commands use no language model.</p>
+        <p id="agent-privacy" class="muted" hidden>Preview sends your prompt and relevant scene text to Ollama on this computer. No model downloads or remote services are started. Images and autonomous jobs are not supported yet.</p>
         <form id="prompt-form">
           <label for="request">Design prompt</label>
           <div class="input-row">
             <input id="request" maxlength="8000" placeholder="Set weather to fog" required>
-            <button type="submit">Preview</button>
+            <button id="preview-request" type="submit">Preview</button>
+            <button id="cancel-request" type="button" hidden>Cancel request</button>
           </div>
         </form>
         <div id="proposal" class="proposal" hidden>
-          <span id="proposal-text"></span>
+          <div class="proposal-detail">
+            <p id="proposal-source" class="muted"></p>
+            <p id="proposal-text"></p>
+            <ul id="proposal-changes"></ul>
+            <details id="proposal-commands-detail">
+              <summary>Inspect validated commands</summary>
+              <pre id="proposal-commands"></pre>
+            </details>
+          </div>
           <button id="apply-plan" type="button" class="primary">Apply</button>
           <button id="discard-plan" type="button">Discard</button>
         </div>
@@ -61,6 +77,7 @@
     </section>
     <aside class="inspector panel" aria-label="Property inspector">
       <div id="inspector">
+        <details id="saved-source" hidden><summary>Site source</summary><p id="saved-source-text"></p></details>
         <h2>Environment</h2>
         <form id="environment" class="stack">
           <label>Weather<select id="weather"></select></label>
@@ -142,8 +159,32 @@
           <select id="landscape-source">
             <option value="procedural">Describe a landscape</option>
             <option value="elevation">Import elevation grid</option>
+            <option value="online">Real U.S. location</option>
           </select>
         </label>
+        <div id="real-site-fields" class="stack" hidden>
+          <label>U.S. street address (optional)<input id="site-address" maxlength="300" placeholder="Street, city, state"></label>
+          <button id="lookup-address" type="button">Look up address</button>
+          <label id="site-matches-field" hidden>Matching address<select id="site-matches"></select></label>
+          <p class="muted">Address lookup uses the U.S. Census service and gives an approximate position. Confirm or edit the coordinates for your site.</p>
+          <div class="triplet">
+            <label>Latitude<input id="site-latitude" type="number" step="any" min="-85" max="85" placeholder="35.6"></label>
+            <label>Longitude<input id="site-longitude" type="number" step="any" min="-180" max="180" placeholder="-82.6"></label>
+            <label>Width (m)<input id="site-span" type="number" step="any" min="20" max="256" value="128"></label>
+          </div>
+          <p class="muted">Preview sends these coordinates to USGS for ground elevation. Saved sites reopen offline. Sample spacing and source resolution depend on the site and dataset.</p>
+          <label class="checkbox"><input id="site-refresh" type="checkbox">Download fresh elevation</label>
+          <div class="input-row">
+            <button id="preview-site" type="button">Preview terrain</button>
+            <button id="cancel-site" type="button" hidden>Cancel request</button>
+          </div>
+          <p id="site-status" role="status" aria-live="polite"></p>
+          <div id="site-preview" hidden>
+            <canvas id="site-canvas" aria-label="Downloaded terrain preview"></canvas>
+            <p id="site-summary"></p>
+            <details><summary>Elevation source details</summary><p id="site-provenance"></p></details>
+          </div>
+        </div>
         <label id="elevation-file-field" hidden>Elevation grid (.json)
           <input id="elevation-file" type="file" accept=".json,application/json">
         </label>

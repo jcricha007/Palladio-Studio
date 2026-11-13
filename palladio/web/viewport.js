@@ -25,7 +25,7 @@ const vertex = `
     viewDepth = depth;
     surface = color;
     gl_Position = vec4(dot(relative, right) / spread.x, dot(relative, up) / spread.y,
-                       1.0004 * depth - 0.16, depth);
+                       1.000016 * depth - 0.160001, depth);
   }
 `;
 const fragment = `
@@ -196,13 +196,13 @@ export class Viewport {
     canvas.addEventListener("wheel", event => {
       event.preventDefault();
       const factor = event.deltaMode === 0 ? .001 : .025;
-      this.camera.distance = Math.max(2, Math.min(170, this.camera.distance * Math.exp(event.deltaY * factor)));
+      this.camera.distance = Math.max(2, Math.min(this.maxDistance || 170, this.camera.distance * Math.exp(event.deltaY * factor)));
       this.draw();
     }, {passive: false});
   }
 
   reset() {
-    Object.assign(this.camera, {target: [0, 1, 0], azimuth: .68, pitch: .43, distance: 33});
+    Object.assign(this.camera, this.defaultCamera || {target: [0, 1, 0], azimuth: .68, pitch: .43, distance: 33});
     this.draw();
   }
 
@@ -238,6 +238,17 @@ export class Viewport {
     if (project.id !== this.projectId) {
       this.terrain = scenery(project.baseline);
       this.projectId = project.id;
+      const {size, spacing, heights} = project.baseline.terrain;
+      this.imported = project.baseline.source.kind === "elevation grid";
+      this.defaultCamera = {target: [0, 1, 0], azimuth: .68, pitch: .43, distance: 33};
+      if (this.imported) {
+        const low = Math.min(...heights), high = Math.max(...heights);
+        const span = (size - 1) * spacing;
+        this.defaultCamera = {target: [0, (low + high) / 2, 0], azimuth: .68, pitch: .7,
+          distance: Math.max(33, Math.hypot(span, span, high - low) * 1.5)};
+      }
+      this.maxDistance = Math.max(170, this.defaultCamera.distance * 3);
+      this.reset();
     }
     this.items = baselineView ? [] : project.scene.elements;
     this.environment = (baselineView ? project.baseline : project.scene).environment;
@@ -270,7 +281,7 @@ export class Viewport {
     for (const [name, value] of Object.entries(this.basis())) gl.uniform3fv(uniforms[name], value);
     gl.uniform2f(uniforms.spread, fieldOfView * width / height, fieldOfView);
     gl.uniform3fv(uniforms.sky, sky);
-    gl.uniform1f(uniforms.haze, {clear: .004, overcast: .012, fog: .05, rain: .027}[weather]);
+    gl.uniform1f(uniforms.haze, {clear: this.imported ? .0006 : .004, overcast: .012, fog: .05, rain: .027}[weather]);
     gl.uniform1f(uniforms.light, daylight * (weather === "clear" ? 1 : .85));
     gl.drawArrays(gl.TRIANGLES, 0, this.count);
   }
