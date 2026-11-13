@@ -26,7 +26,7 @@
       <div class="viewport">
         <canvas id="view" aria-label="3D property preview"></canvas>
         <div id="rain" aria-hidden="true"></div>
-        <div id="assembly-preview-badge" hidden role="status">Assembly preview · Not saved</div>
+        <div id="assembly-preview-badge" hidden role="status">Preview · Not saved</div>
         <div class="view-top">
           <div role="group" aria-label="Scene view" class="switch">
             <button type="button" id="design-view" aria-pressed="true">Design</button>
@@ -45,15 +45,31 @@
         </div>
       </div>
       <div class="prompt">
+        <div class="agent-settings" aria-label="Agent connection">
+          <label>Agent<select id="agent-provider"><option value="rules">Built-in commands</option><option value="ollama">Local Ollama</option></select></label>
+          <label id="agent-model-label" hidden>Installed model<select id="agent-model"><option value="">Choose an installed model</option></select></label>
+          <button id="refresh-models" type="button" hidden>Refresh models</button>
+        </div>
+        <p id="agent-status" class="muted" role="status" aria-live="polite">Built-in commands use no language model.</p>
+        <p id="agent-privacy" class="muted" hidden>Preview sends your prompt and relevant scene text to Ollama on this computer. No model downloads or remote services are started. Images and autonomous jobs are not supported yet.</p>
         <form id="prompt-form">
           <label for="request">Design prompt</label>
           <div class="input-row">
             <input id="request" maxlength="8000" placeholder="Set weather to fog" required>
-            <button type="submit">Preview</button>
+            <button id="preview-request" type="submit">Preview</button>
+            <button id="cancel-request" type="button" hidden>Cancel request</button>
           </div>
         </form>
         <div id="proposal" class="proposal" hidden>
-          <span id="proposal-text"></span>
+          <div class="proposal-detail">
+            <p id="proposal-source" class="muted"></p>
+            <p id="proposal-text"></p>
+            <ul id="proposal-changes"></ul>
+            <details id="proposal-commands-detail">
+              <summary>Inspect validated commands</summary>
+              <pre id="proposal-commands"></pre>
+            </details>
+          </div>
           <button id="apply-plan" type="button" class="primary">Apply</button>
           <button id="discard-plan" type="button">Discard</button>
         </div>

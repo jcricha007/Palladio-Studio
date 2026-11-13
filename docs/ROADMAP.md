@@ -27,7 +27,7 @@ parts. Browser previews are unsaved; Apply commits all parts atomically. Both re
 consume the generated editable elements. This is an early 0.4 building block, not completion
 of that milestone or the intervening real-site work. Assemblies do not remain parametric
 groups after insertion, and arbitrary openings, stair generation, detailed assets, terrain
-imports and local-model planning remain future work. The separate navigation PR continues
+imports remain future work. The separate navigation PR continues
 0.2 without changes to its Unreal code in this increment.
 
 ## Milestones
@@ -54,3 +54,13 @@ imports and local-model planning remain future work. The separate navigation PR 
 The Unreal developer preview loads existing terrain, vegetation, and pavilion geometry from the local property server. It projects positions, dimensions, and yaw into Unreal coordinates and uses the same stable element IDs and revision checks as the browser. Free flight, original-site comparison, and horizontal element moves are included in the preview.
 
 Complete Windows acceptance with a saved 0.1 property, then add orbit and collision-aware walkthrough navigation before closing 0.2.
+
+## Local agent interface increment
+
+The browser now offers Built-in commands and a model-selectable local Ollama adapter. Its
+single-turn structured plans are previewed, strictly validated and committed only on Apply.
+Selection-aware bounded context, explicit model changes and revision conflicts are covered
+by fake-runtime and DOM tests. This advances part of 0.5; it does not complete visual-reference
+input, a native Unreal agent interface or 0.6 autonomous jobs. Keep the renderer-independent
+planner boundary so later runtimes do not change scene tools or persistence. Model defaults
+remain unset until real Ollama and concurrent Unreal measurements on the target workstation.
