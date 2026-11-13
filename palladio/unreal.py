@@ -1,6 +1,7 @@
 """Project the renderer-independent scene into Unreal centimetres, Z up."""
 
 from .scene import MATERIALS
+from .groups import owner
 
 
 def unreal_vector(vector):
@@ -26,12 +27,15 @@ def unreal_view(project):
 
     elements = []
     for element in project["scene"]["elements"]:
+        group = owner(project["scene"], element["id"])
         dimensions = unreal_vector(element["size"])
         center = unreal_vector(element["position"])
         center[2] += dimensions[2] / 2
         elements.append({
             "id": element["id"],
             "name": element["name"],
+            **({'edit_id': group['id'], 'edit_action': 'assembly_update',
+                'edit_position': group['spec']['position']} if group else {}),
             "center_cm": center,
             "dimensions_cm": dimensions,
             "yaw_degrees": -element["yaw"],

@@ -21,7 +21,8 @@ for _kind, _item in ASSEMBLIES.items():
 
 def generate_assembly(data):
     if not isinstance(data, dict) or not data.keys() <= {
-        "kind", "name", "width", "depth", "height", "position", "yaw", "material"
+        "kind", "name", "width", "depth", "height", "position", "yaw", "material",
+        "door_width", "door_height", "window_width", "window_height", "window_sill"
     }:
         raise ValidationError("Choose supported assembly fields.")
     kind = data.get("kind")
@@ -40,13 +41,27 @@ def generate_assembly(data):
         "yaw": number(data.get("yaw", 0), "Assembly rotation", -360, 360),
         "material": data.get("material", defaults["material"]),
     }
+    if shell:
+        spec.update({
+            'door_width': number(data.get('door_width', 2.8 if kind == 'garage' else 1.2), 'Door width', .6, spec['width'] - .6),
+            'door_height': number(data.get('door_height', 2.5 if kind == 'garage' else 2.2), 'Door height', 1, spec['height'] - .1),
+            'window_width': number(data.get('window_width', min(2, spec['width'] - 1)), 'Window width', .4, spec['width'] - .6),
+            'window_height': number(data.get('window_height', 1.2), 'Window height', .3, spec['height'] - .2),
+            'window_sill': number(data.get('window_sill', .9), 'Window sill', .1, spec['height'] - .4),
+        })
+        if spec['window_height'] + spec['window_sill'] > spec['height'] - .1:
+            raise ValidationError('Window opening must leave at least 0.1 m above it.')
+    elif any(key.startswith(('door_', 'window_')) for key in data):
+        raise ValidationError('Openings apply to room and garage shells.')
     # Validate material even before producing any geometry.
     element({"kind": "block", "name": "check", "size": [1, 1, 1],
              "position": [0, 0, 0], "material": spec["material"]})
     pieces = []
+    roles = {}
     angle = math.radians(spec["yaw"])
 
     def add(label, position, size, material=None, piece_kind="block"):
+        roles[label] = roles.get(label, 0) + 1
         x, y, z = position
         px, py, pz = spec["position"]
         pieces.append(element({
@@ -55,6 +70,7 @@ def generate_assembly(data):
                          pz - x * math.sin(angle) + z * math.cos(angle)],
             "size": size, "yaw": spec["yaw"], "material": material or spec["material"],
         }))
+        pieces[-1]["role"] = f"{label}:{roles[label]}"
 
     w, d, h = spec["width"], spec["depth"], spec["height"]
     if shell:
@@ -64,14 +80,14 @@ def generate_assembly(data):
         for x, label in [(-w / 2 + t / 2, "left wall"), (w / 2 - t / 2, "right wall")]:
             add(label, [x, floor, 0], [t, h, d], None, "wall")
         inner = w - 2 * t
-        door_w, door_h = (2.8, 2.5) if kind == "garage" else (1.2, 2.2)
+        door_w, door_h = spec["door_width"], spec["door_height"]
         z = d / 2 - t / 2
         side = (inner - door_w) / 2
         for sign, label in [(-1, "entry left"), (1, "entry right")]:
             add(label, [sign * (door_w / 2 + side / 2), floor, z], [side, h, t], None, "wall")
         add("entry lintel", [0, floor + door_h, z], [door_w, h - door_h, t], None, "wall")
         # Window is an actual gap in the rear wall, filled only by glazing.
-        window_w, sill, window_h = min(2, inner - .6), .9, 1.2
+        window_w, sill, window_h = spec["window_width"], spec["window_sill"], spec["window_height"]
         side = (inner - window_w) / 2
         z = -d / 2 + t / 2
         for sign, label in [(-1, "window left"), (1, "window right")]:

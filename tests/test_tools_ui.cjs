@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const nodes=new Map();
+const find=id=>{if(!nodes.has(id))nodes.set(id,{value:'',hidden:false,events:{},addEventListener(n,f){this.events[n]=f;},querySelectorAll(){return [];}});return nodes.get(id);};
+let commands,invalidations=0;
+const context=vm.createContext({find,preview:c=>{commands=c;},invalidate:()=>invalidations++});
+vm.runInContext(fs.readFileSync('palladio/web/tools.js','utf8').replace('export class','class')+'\nconst tools=new DesignTools(find,preview,invalidate);',context);
+context.project={id:'p',revision:2,scene:{assemblies:[{id:'g',spec:{kind:'room',name:'Room',width:6,depth:5,height:3,position:[1,2,3],yaw:20,door_width:1.2,door_height:2.2,window_width:2,window_height:1.2,window_sill:.9},members:{floor:'e'}}]}};
+vm.runInContext('tools.render(project,"e")',context);
+find('group-width').value='9';find('group-form').events.submit({preventDefault(){}});
+assert.equal(commands[0].assembly.width,9);assert.equal(commands[0].id,'g');
+find('group-offset').value='.3';find('group-place').events.click();assert.equal(commands[0].offset_m,.3);
+find('group-form').events.input();assert.equal(invalidations,1);
+vm.runInContext('tools.render(project,null)',context);assert.equal(find('group-panel').hidden,true);
+commands=null;find('group-remove').events.click();assert.equal(commands,null);
+console.log('PASS: assembly parameter preview, placement, invalidation and deselection');

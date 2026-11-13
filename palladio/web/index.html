@@ -78,6 +78,37 @@
     <aside class="inspector panel" aria-label="Property inspector">
       <div id="inspector">
         <details id="saved-source" hidden><summary>Site source</summary><p id="saved-source-text"></p></details>
+        <section id="group-panel" hidden>
+          <h2 id="group-title">Selected assembly</h2>
+          <form id="group-form" class="stack">
+            <p class="muted">Edit linked parts together. Part names and materials remain overrides. Detach to edit individual geometry.</p>
+            <div class="triplet">
+              <label>Width<input id="group-width" type="number" step="any" min="0.05" required></label>
+              <label>Depth<input id="group-depth" type="number" step="any" min="0.05" required></label>
+              <label>Height<input id="group-height" type="number" step="any" min="0.05" required></label>
+            </div>
+            <div class="triplet">
+              <label>X<input id="group-x" type="number" step="any" required></label>
+              <label>Y<input id="group-y" type="number" step="any" required></label>
+              <label>Z<input id="group-z" type="number" step="any" required></label>
+            </div>
+            <label>Rotation (degrees)<input id="group-yaw" type="number" step="any" required></label>
+            <div id="group-openings" class="stack">
+              <label>Door width<input id="group-door_width" type="number" step="any"></label>
+              <label>Door height<input id="group-door_height" type="number" step="any"></label>
+              <label>Window width<input id="group-window_width" type="number" step="any"></label>
+              <label>Window height<input id="group-window_height" type="number" step="any"></label>
+              <label>Window sill<input id="group-window_sill" type="number" step="any"></label>
+            </div>
+            <button type="submit">Preview assembly changes</button>
+            <label>Ground offset (m)<input id="group-offset" type="number" value="0" min="-5" max="50" step="any"></label>
+            <button id="group-place" type="button">Preview placement on ground</button>
+            <button id="group-duplicate" type="button">Preview copy at X/Y/Z</button>
+            <button id="group-detach" type="button">Preview detach into pieces</button>
+            <button id="group-remove" type="button">Preview remove assembly</button>
+          </form>
+          <hr>
+        </section>
         <h2>Environment</h2>
         <form id="environment" class="stack">
           <label>Weather<select id="weather"></select></label>
@@ -87,7 +118,7 @@
         <hr>
         <h2>Assembly builder</h2>
         <form id="assembly-form" class="stack">
-          <p class="muted">Preview simple room shells and furnishing sets, then save their editable pieces together.</p>
+          <p class="muted">Preview simple room shells and furnishing sets, then save them as linked assemblies. Select a saved part to edit its assembly.</p>
           <label>Assembly<select id="assembly-kind"></select></label>
           <label>Name<input id="assembly-name" maxlength="60" required></label>
           <fieldset>

@@ -308,11 +308,21 @@ void APalladioGameMode::MoveSelection(const FVector& DeltaMetres)
             const FVector Center = VectorField(Element, TEXT("center_cm"));
             const FVector Dimensions = VectorField(Element, TEXT("dimensions_cm"));
             const FVector Base(Center.X / 100, (Center.Z - Dimensions.Z / 2) / 100, Center.Y / 100);
-            const FVector Position = Base + DeltaMetres;
+            FString EditId = Selection;
+            FString Action = TEXT("update");
+            FVector EditBase = Base;
+            if (Element->HasTypedField<EJson::String>(TEXT("edit_id")))
+            {
+                EditId = Element->GetStringField(TEXT("edit_id"));
+                Action = Element->GetStringField(TEXT("edit_action"));
+                EditBase = VectorField(Element, TEXT("edit_position"));
+            }
+            const FVector Position = EditBase + DeltaMetres;
+            const FString Field = Action == TEXT("assembly_update") ? TEXT("assembly") : TEXT("element");
             Request(FString::Printf(
-                TEXT("{\"revision\":%d,\"commands\":[{\"action\":\"update\",\"id\":\"%s\",")
-                TEXT("\"element\":{\"position\":[%.8f,%.8f,%.8f]}}]}"),
-                Current->GetIntegerField(TEXT("revision")), *Selection, Position.X, Position.Y, Position.Z));
+                TEXT("{\"revision\":%d,\"commands\":[{\"action\":\"%s\",\"id\":\"%s\",")
+                TEXT("\"%s\":{\"position\":[%.8f,%.8f,%.8f]}}]}"),
+                Current->GetIntegerField(TEXT("revision")), *Action, *EditId, *Field, Position.X, Position.Y, Position.Z));
             return;
         }
     }

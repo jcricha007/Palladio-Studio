@@ -243,3 +243,23 @@ Agent tests use a fake loopback Ollama server to verify model switching, wire pa
 remote-model rejection, malformed output, stale revisions, atomic edits, timeout errors and
 no-save previews. DOM tests cover controls and late-response cancellation. These tests do
 not benchmark real model quality, Windows/Unreal performance, or browser rendering.
+
+## Linked assemblies and ground placement
+
+New assemblies retain their generator parameters and child IDs. Select any saved part to
+open **Selected assembly**. Preview a resize, rotation or move, then Apply. Room and garage
+controls include door/window width and height and window sill elevation. Individual name
+and material changes remain overrides through regeneration. Use **Preview detach into
+pieces** before changing an individual part's geometry. Earlier properties remain ungrouped.
+
+**Preview placement on ground** sets the assembly base to the highest terrain point beneath
+its rotated footprint plus the chosen offset. The query clips the renderer's triangles to
+the footprint. Preview notes report buried or unsupported areas; foundations and overlap
+resolution are not generated. Copy uses the displayed X/Y/Z as the new location. Group
+removal, detachment, copy and placement share Preview/Apply and revision restore.
+
+Unreal arrow moves now target the selected part's whole assembly. Rebuild the native viewer
+from this checkout before testing. Local checks include `node tests/test_tools_ui.cjs` in
+addition to the existing suites. Windows compilation and interactive acceptance remain
+required: resize a garage, change one part's material, place it on a sloped site, copy it,
+restore history and reopen in both viewers.

@@ -132,3 +132,14 @@ as those tools gain validation and preview support.
 The broader walkthrough target is a furnished home, garage and landscaped approach on a
 recognizable site, with detailed materials and atmosphere, reliable persistence, and both
 manual and agent-driven editing. Closing that target requires the remaining work above.
+
+## Stack increment 1: assembly editing and placement
+
+Implemented above PR #8 on `palladio/assembly-placement`: persistent assembly specifications,
+stable part identities, finish/name overrides, explicit detachment, whole-group editing,
+copy/removal, parametric openings and triangular-terrain footprint placement. Existing
+ungrouped properties are preserved. Native arrow movement addresses group ownership.
+
+Local evidence: 43 Python tests and four Node state suites pass. Windows Unreal compilation
+and browser/Unreal visual acceptance remain open. The local agent still uses its existing
+allowlist; explicit group tools are exposed to it in the reference-agent increment.

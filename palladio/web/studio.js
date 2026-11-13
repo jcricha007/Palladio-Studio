@@ -1,4 +1,5 @@
 import {Viewport} from "./viewport.js";
+import {DesignTools} from "./tools.js";
 import {SitePicker} from "./site-picker.js";
 
 const $ = id => document.getElementById(id);
@@ -19,6 +20,7 @@ let modelGeneration = 0;
 let installedModels = [];
 let agentEndpoint = "http://127.0.0.1:11434";
 const sites = new SitePicker($, api, syncControls);
+const designTools = new DesignTools($, previewTool, discardOnEdit);
 
 function agentStatus(message, error = false) {
   $("agent-status").textContent = message;
@@ -168,6 +170,7 @@ function status(message, error = false) {
 }
 
 function syncControls() {
+  designTools.sync(busy || !project || baselineView);
   $("new-property").disabled = busy || !catalog;
   $("empty-create").disabled = busy || !catalog;
   $("duplicate").disabled = busy || !project;
@@ -243,11 +246,11 @@ function showPlan(plan = null) {
   $("proposal-text").textContent = plan?.summary || "";
   $("proposal-source").textContent = plan ? (plan.provider === "ollama"
     ? `Local model: ${plan.model} · Suggested response · Revision ${plan.revision} · Not saved`
-    : `Built-in commands · Revision ${plan.revision} · Not saved`) : "";
+    : `${plan.provider === "tools" ? "Manual tools" : "Built-in commands"} · Revision ${plan.revision} · Not saved`) : "";
   $("proposal-commands-detail").open = false;
   $("proposal-commands").textContent = plan ? JSON.stringify(plan.commands || (plan.command ? [plan.command] : []), null, 2) : "";
   $("proposal-changes").replaceChildren();
-  for (const change of plan?.changes || []) {
+  for (const change of [...(plan?.changes || []), ...(plan?.warnings || [])]) {
     const item = document.createElement("li");
     item.textContent = change;
     $("proposal-changes").append(item);
@@ -362,6 +365,7 @@ function render() {
   $("weather").value = scene.environment.weather;
   $("hour").value = displayTime(scene.environment.hour);
   $("rain").classList.toggle("active", scene.environment.weather === "rain");
+  designTools.render(project, selected);
   const target = items.find(item => item.id === selected);
   $("element").hidden = !target;
   if (target) {
@@ -379,6 +383,17 @@ function render() {
     : [option("", "No earlier revisions")]));
   updateViewport();
   syncControls();
+}
+
+function previewTool(commands) {
+  return run(async () => {
+    showPlan();
+    const id = project.id, revision = project.revision;
+    const plan = await api(propertiesPath + '/' + id + '/command-preview', {revision, commands});
+    if (project.id !== id || project.revision !== plan.revision) throw new Error('Property changed. Preview again.');
+    showPlan(plan);
+    status('Review the proposed changes and placement notes, then Apply or Discard.');
+  });
 }
 
 function commit(payload, revision = project.revision) {
