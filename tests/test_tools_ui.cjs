@@ -1,8 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const nodes=new Map();
-const find=id=>{if(!nodes.has(id))nodes.set(id,{value:'',hidden:false,events:{},addEventListener(n,f){this.events[n]=f;},querySelectorAll(){return [];}});return nodes.get(id);};
+const find=id=>{if(!nodes.has(id))nodes.set(id,{value:'',hidden:false,events:{},addEventListener(n,f){this.events[n]=f;},querySelectorAll(){return [];},replaceChildren(...items){this.items=items;this.value=items[0]?.value||'';}});return nodes.get(id);};
 let commands,invalidations=0;
-const context=vm.createContext({find,preview:c=>{commands=c;},invalidate:()=>invalidations++});
+const context=vm.createContext({Option:function(label,value){this.label=label;this.value=value;},find,preview:c=>{commands=c;},invalidate:()=>invalidations++});
 vm.runInContext(fs.readFileSync('palladio/web/tools.js','utf8').replace('export class','class')+'\nconst tools=new DesignTools(find,preview,invalidate);',context);
 context.project={id:'p',revision:2,scene:{assemblies:[{id:'g',spec:{kind:'room',name:'Room',width:6,depth:5,height:3,position:[1,2,3],yaw:20,door_width:1.2,door_height:2.2,window_width:2,window_height:1.2,window_sill:.9},members:{floor:'e'}}]}};
 vm.runInContext('tools.render(project,"e")',context);
@@ -12,4 +12,11 @@ find('group-offset').value='.3';find('group-place').events.click();assert.equal(
 find('group-form').events.input();assert.equal(invalidations,1);
 vm.runInContext('tools.render(project,null)',context);assert.equal(find('group-panel').hidden,true);
 commands=null;find('group-remove').events.click();assert.equal(commands,null);
+for(const [id,value] of Object.entries({'terrain-name':'Pad','terrain-mode':'flatten','terrain-x':'8','terrain-z':'4','terrain-radius':'16','terrain-height':'3'}))find(id).value=value;
+find('terrain-form').events.submit({preventDefault(){}});
+assert.equal(commands[0].action,'terrain_layer');assert.equal(commands[0].layer.height_m,3);assert.equal(commands[0].layer.amount_m,undefined);
+context.project.revision=3;context.project.scene.terrain_layers=[{id:'layer',name:'Pad',enabled:true}];
+vm.runInContext('tools.render(project,null)',context);
+find('terrain-toggle').events.click();assert.equal(commands[0].enabled,false);assert.equal(commands[0].id,'layer');
+find('terrain-restore').events.click();assert.equal(commands[0].action,'terrain_restore');
 console.log('PASS: assembly parameter preview, placement, invalidation and deselection');

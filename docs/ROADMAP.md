@@ -143,3 +143,14 @@ ungrouped properties are preserved. Native arrow movement addresses group owners
 Local evidence: 43 Python tests and four Node state suites pass. Windows Unreal compilation
 and browser/Unreal visual acceptance remain open. The local agent still uses its existing
 allowlist; explicit group tools are exposed to it in the reference-agent increment.
+
+## Stack increment 2: building and landscape tools
+
+Implemented on `palladio/building-landscape` above the assembly increment: linked stairs,
+paths/terraces and planters; ordered raise/lower/flatten terrain layers; layer enable/remove;
+and original-ground restoration independent of architecture. Both renderers receive the
+current and original ground, and procedural trees follow the active surface. Complex roofs,
+planting tools and water remain open within this roadmap area.
+
+Local evidence: 48 Python tests and four Node suites pass. Manual browser rendering and
+native UE 5.7 compilation, collision refresh and baseline switching remain required.

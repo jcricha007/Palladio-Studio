@@ -75,6 +75,15 @@ function box(vertices, {size: [width, height, depth], position, yaw}, color) {
   ]) quad(vertices, corners[a], corners[b], corners[c], corners[d], color);
 }
 
+function groundHeight(terrain, x, z) {
+  const {size,spacing,heights:h}=terrain, edge=(size-1)*spacing/2;
+  let u=(x+edge)/spacing, v=(z+edge)/spacing;
+  const col=Math.max(0,Math.min(size-2,Math.floor(u))),row=Math.max(0,Math.min(size-2,Math.floor(v)));
+  u=Math.max(0,Math.min(1,u-col));v=Math.max(0,Math.min(1,v-row));
+  const a=h[row*size+col],b=h[(row+1)*size+col],c=h[(row+1)*size+col+1],d=h[row*size+col+1];
+  return v>=u?a+(c-b)*u+(b-a)*v:a+(d-a)*u+(c-d)*v;
+}
+
 function scenery(baseline) {
   const vertices = [];
   const {size, spacing, heights} = baseline.terrain;
@@ -235,8 +244,14 @@ export class Viewport {
   }
 
   update(project, baselineView, materials, selected) {
+    const landscape = !baselineView && project.scene.terrain ? {...project.baseline, terrain:project.scene.terrain,
+      vegetation:project.baseline.vegetation.map(tree=>({...tree,position:[tree.position[0],groundHeight(project.scene.terrain,tree.position[0],tree.position[2]),tree.position[2]]}))} : project.baseline;
+    const terrainKey=JSON.stringify([project.id,landscape.terrain]);
+    if (terrainKey !== this.terrainKey) {
+      this.terrain = scenery(landscape);
+      this.terrainKey = terrainKey;
+    }
     if (project.id !== this.projectId) {
-      this.terrain = scenery(project.baseline);
       this.projectId = project.id;
       const {size, spacing, heights} = project.baseline.terrain;
       this.imported = project.baseline.source.kind === "elevation grid";

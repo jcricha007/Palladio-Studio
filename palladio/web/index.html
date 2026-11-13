@@ -93,6 +93,7 @@
               <label>Z<input id="group-z" type="number" step="any" required></label>
             </div>
             <label>Rotation (degrees)<input id="group-yaw" type="number" step="any" required></label>
+            <label id="group-steps-label" hidden>Step count<input id="group-steps" type="number" min="2" max="32" step="1"></label>
             <div id="group-openings" class="stack">
               <label>Door width<input id="group-door_width" type="number" step="any"></label>
               <label>Door height<input id="group-door_height" type="number" step="any"></label>
@@ -115,6 +116,27 @@
           <label>Time of day<input id="hour" type="time" step="60" required></label>
           <button type="submit">Update environment</button>
         </form>
+        <hr>
+        <details id="terrain-tools">
+          <summary>Terrain design layers</summary>
+          <form id="terrain-form" class="stack">
+            <p class="muted">Original ground stays saved. Flatten creates a flat centre with a blended edge. Buildings keep their positions.</p>
+            <label>Layer name<input id="terrain-name" value="Ground edit" maxlength="80" required></label>
+            <label>Operation<select id="terrain-mode"><option value="raise">Raise</option><option value="lower">Lower</option><option value="flatten">Flatten toward height</option></select></label>
+            <div class="triplet">
+              <label>X<input id="terrain-x" type="number" value="0" step="any" required></label>
+              <label>Z<input id="terrain-z" type="number" value="0" step="any" required></label>
+              <label>Radius (m)<input id="terrain-radius" type="number" value="12" min="0.25" max="128" step="any" required></label>
+            </div>
+            <label>Raise/lower (m)<input id="terrain-amount" type="number" value="1" min="0.01" max="20" step="any"></label>
+            <label>Flatten local height (m)<input id="terrain-height" type="number" value="0" min="-200" max="200" step="any"></label>
+            <button type="submit">Preview terrain layer</button>
+            <label>Saved layers<select id="terrain-layers"></select></label>
+            <button id="terrain-toggle" type="button">Preview enable / disable</button>
+            <button id="terrain-remove" type="button">Preview remove layer</button>
+            <button id="terrain-restore" type="button">Preview restore original ground</button>
+          </form>
+        </details>
         <hr>
         <h2>Assembly builder</h2>
         <form id="assembly-form" class="stack">

@@ -57,7 +57,7 @@ The preview uses basic material colors and simple sunlight and fog. Richer weath
 
 ## Current scope
 
-The studio includes procedural landscapes, imported and downloaded elevation, a WebGL orbit viewport, editable architectural pieces and four assemblies, material swatches, atmosphere controls, property duplication, and revision history. The Unreal developer preview opens the same saved properties and commits element moves to the same history. Built-in commands and an optional local Ollama adapter propose edits through the shared command interface. Detailed materials and assets, persistent parametric assemblies, visual references, terrain editing, and autonomous design jobs remain on the roadmap.
+The studio includes procedural landscapes, imported and downloaded elevation, a WebGL orbit viewport, editable architectural pieces and linked assemblies, material swatches, atmosphere controls, property duplication, and revision history. The Unreal developer preview opens the same saved properties and commits element moves to the same history. Built-in commands and an optional local Ollama adapter propose edits through the shared command interface. Detailed materials and assets, persistent parametric assemblies, visual references, terrain editing, and autonomous design jobs remain on the roadmap.
 
 ## Develop
 
@@ -105,8 +105,8 @@ Shell width/depth describe the outside walls, and height is the clear wall heigh
 (+Z before rotation) has an open doorway, the rear has a glazed window opening. The garage
 entry is 2.8 × 2.5 m. Furniture width/depth describes its footprint; height is its tallest part.
 Placement does **not** snap to terrain or avoid existing objects. Use the flat site origin
-or set the elevation deliberately. Generated pieces are independent after creation; changing
-one does not regenerate the assembly. These schematic box models do not establish structural,
+or set the elevation deliberately. New assemblies retain their parameters. Use the Selected assembly controls to regenerate
+the group, or explicitly detach it for independent geometry edits. These schematic box models do not establish structural,
 accessibility, planning, energy, or building-code compliance.
 
 Developer verification:
@@ -217,7 +217,7 @@ proposal rather than overwriting it. Existing-object edits can target only IDs i
 the supplied excerpt. Full-scene reasoning is not promised; context is character-bounded,
 not token-counted, so a runtime may still truncate an unusually large/non-ASCII request.
 
-Supported commands: add/update/remove simple elements, add the four existing assemblies,
+Supported commands: add/update/remove simple elements, add supported assemblies,
 and change atmosphere. A proposal can contain at most 12 commands. Newly added objects
 cannot be referred to by ID later in the same proposal. Model-generated geometry uses the
 same schematic assets as manual editing, not photorealistic generation. No images, shell
@@ -263,3 +263,23 @@ from this checkout before testing. Local checks include `node tests/test_tools_u
 addition to the existing suites. Windows compilation and interactive acceptance remain
 required: resize a garage, change one part's material, place it on a sloped site, copy it,
 restore history and reopen in both viewers.
+
+## Terrain layers and additional assemblies
+
+The assembly catalog now includes straight stairs, paths/terraces and raised planters.
+Stairs retain their step count and regenerate linked treads; these schematic stairs do not
+establish building-code compliance. Paths and planters are editable block assemblies.
+Place them explicitly using the selected assembly's ground-placement controls.
+
+Open **Terrain design layers** to preview raising/lowering ground or flattening it toward a
+local height. Flattening has a flat inner region and a blended outer edge. A layer radius
+must be at least the terrain sample spacing. Enable/disable or remove individual layers,
+or restore all original ground while retaining buildings. Preview/Apply and history work
+as before. Terrain edits preserve the acquired source data and do not move architecture.
+Existing procedural trees follow the changed ground. Native reload and Original site switch
+now rebuild the appropriate collision surface and scenery.
+
+Acceptance: add two terrain layers, toggle the first, preview a stair and terrace, restore
+original ground, then restore a prior revision. Verify both views and walking collision in
+Unreal after rebuilding. Arbitrary roofs, planted vegetation, water and fine landscape
+assets remain later increments.

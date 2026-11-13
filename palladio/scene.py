@@ -142,6 +142,9 @@ def edit_scene(scene, command, baseline=None):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if action in {'terrain_layer','terrain_toggle','terrain_remove','terrain_restore'}:
+        from .landscape_tools import edit_terrain
+        return edit_terrain(scene, command, baseline)
     if action in {'assembly', 'assembly_update', 'assembly_place', 'assembly_duplicate', 'assembly_remove', 'assembly_detach'}:
         from .groups import edit_group
         return edit_group(scene, command, baseline)

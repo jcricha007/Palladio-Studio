@@ -197,7 +197,7 @@ void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
 {
     TArray<FVector> Vertices;
     TArray<int32> Indices;
-    for (const auto& Value : View->GetArrayField(TEXT("vertices_cm")))
+    for (const auto& Value : View->GetArrayField(bBaseline && View->HasField(TEXT("baseline_vertices_cm")) ? TEXT("baseline_vertices_cm") : TEXT("vertices_cm")))
     {
         const auto& Point = Value->AsArray();
         Vertices.Emplace(Point[0]->AsNumber(), Point[1]->AsNumber(), Point[2]->AsNumber());
@@ -228,7 +228,7 @@ void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
     {
         AddShape(Cube, FVector(0, 9950, -805), FVector(34000, 16100, 10), 0, FColor(61, 110, 122));
     }
-    for (const auto& Value : View->GetArrayField(TEXT("vegetation")))
+    for (const auto& Value : View->GetArrayField(bBaseline && View->HasField(TEXT("baseline_vegetation")) ? TEXT("baseline_vegetation") : TEXT("vegetation")))
     {
         const auto& Tree = Value->AsObject();
         const FVector Base = VectorField(Tree, TEXT("base_cm"));
@@ -239,21 +239,17 @@ void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
             0, FColor(61, 100, 59));
     }
 
-    // Landscape actors belong to the immutable site and survive design refreshes.
-    Shapes.Reset();
+
 }
 
 void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
 {
-    if (Terrain->GetNumSections() == 0)
-    {
-        BuildLandscape(View);
-    }
     for (AActor* Shape : Shapes)
     {
         Shape->Destroy();
     }
     Shapes.Reset();
+    BuildLandscape(View);
 
     const auto& Elements = View->GetArrayField(TEXT("elements"));
     if (!Elements.ContainsByPredicate([this](const auto& Value)

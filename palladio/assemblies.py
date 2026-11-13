@@ -7,6 +7,9 @@ ASSEMBLIES = {
     "room": {"label": "Room shell", "width": 6, "depth": 5, "height": 3, "material": "plaster"},
     "garage": {"label": "Garage shell", "width": 6, "depth": 7, "height": 3.2, "material": "concrete"},
     "dining": {"label": "Dining set", "width": 3, "depth": 2.6, "height": 0.8, "material": "oak"},
+    "stairs": {"label":"Straight stairs","width":1.2,"depth":4,"height":2.8,"material":"oak"},
+    "path": {"label":"Path / terrace","width":3,"depth":8,"height":.15,"material":"stone"},
+    "planter": {"label":"Raised planter","width":2,"depth":2,"height":.6,"material":"concrete"},
     "lounge": {"label": "Lounge set", "width": 3.4, "depth": 2.8, "height": 0.9, "material": "oak"},
 }
 
@@ -18,25 +21,31 @@ for _kind, _item in ASSEMBLIES.items():
         "height": [3 if _kind == "garage" else 2.5 if _shell else .6, 8 if _shell else 1.5],
     }
 
+for _kind, _limits in {
+    'stairs': {'width':[.6,4], 'depth':[1,12], 'height':[.3,4]},
+    'path': {'width':[.5,30], 'depth':[1,50], 'height':[.05,1]},
+    'planter': {'width':[1,8], 'depth':[1,8], 'height':[.3,2]},
+}.items(): ASSEMBLIES[_kind]['limits'] = _limits
+
 
 def generate_assembly(data):
     if not isinstance(data, dict) or not data.keys() <= {
         "kind", "name", "width", "depth", "height", "position", "yaw", "material",
-        "door_width", "door_height", "window_width", "window_height", "window_sill"
+        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps"
     }:
         raise ValidationError("Choose supported assembly fields.")
     kind = data.get("kind")
     if not isinstance(kind, str) or kind not in ASSEMBLIES:
-        raise ValidationError("Choose a room, garage, dining, or lounge assembly.")
+        raise ValidationError("Choose a supported assembly from the catalog.")
     defaults = ASSEMBLIES[kind]
     shell = kind in ("room", "garage")
     minimum = 4 if kind == "garage" else 3 if shell else 2
     spec = {
         "kind": kind,
         "name": required_text(data.get("name", defaults["label"]), "Assembly name", 60),
-        "width": number(data.get("width", defaults["width"]), "Width (m)", minimum, 30 if shell else 8),
-        "depth": number(data.get("depth", defaults["depth"]), "Depth (m)", minimum, 30 if shell else 8),
-        "height": number(data.get("height", defaults["height"]), "Height (m)", 3 if kind == "garage" else 2.5 if shell else .6, 8 if shell else 1.5),
+        "width": number(data.get("width", defaults["width"]), "Width (m)", *defaults["limits"]["width"]),
+        "depth": number(data.get("depth", defaults["depth"]), "Depth (m)", *defaults["limits"]["depth"]),
+        "height": number(data.get("height", defaults["height"]), "Height (m)", *defaults["limits"]["height"]),
         "position": vector(data.get("position", [0, 0, 0]), "Assembly position", -900, 900),
         "yaw": number(data.get("yaw", 0), "Assembly rotation", -360, 360),
         "material": data.get("material", defaults["material"]),
@@ -53,6 +62,15 @@ def generate_assembly(data):
             raise ValidationError('Window opening must leave at least 0.1 m above it.')
     elif any(key.startswith(('door_', 'window_')) for key in data):
         raise ValidationError('Openings apply to room and garage shells.')
+    if kind == 'stairs':
+        steps = data.get('steps', max(2, math.ceil(spec['height'] / .18)))
+        if type(steps) is not int or not 2 <= steps <= 32:
+            raise ValidationError('Stairs need 2 to 32 steps.')
+        if spec['height'] / steps < .05 or spec['height'] / steps > .3 or spec['depth'] / steps < .05:
+            raise ValidationError('Stair rise must be 0.05–0.3 m and tread depth at least 0.05 m.')
+        spec['steps'] = steps
+    elif 'steps' in data:
+        raise ValidationError('Step count only applies to stairs.')
     # Validate material even before producing any geometry.
     element({"kind": "block", "name": "check", "size": [1, 1, 1],
              "position": [0, 0, 0], "material": spec["material"]})
@@ -95,6 +113,19 @@ def generate_assembly(data):
         add("window sill wall", [0, floor, z], [window_w, sill, t], None, "wall")
         add("window header", [0, floor + sill + window_h, z], [window_w, h - sill - window_h, t], None, "wall")
         add("window glazing", [0, floor + sill, z], [window_w, window_h, .06], "glass", "glazing")
+    elif kind == 'stairs':
+        steps=spec['steps']
+        for i in range(steps):
+            add(f"step {i+1}", [0,0,-d/2+(i+.5)*d/steps], [w,h*(i+1)/steps,d/steps])
+    elif kind == 'path':
+        add('surface', [0,0,0], [w,h,d], None, 'floor')
+    elif kind == 'planter':
+        t=.15
+        add('base',[0,0,0],[w,.1,d])
+        for sign in (-1,1):
+            add('side',[sign*(w-t)/2,.1,0],[t,h-.1,d])
+            add('end',[0,.1,sign*(d-t)/2],[w-2*t,h-.1,t])
+        add('soil',[0,.1,0],[w-2*t,max(.05,h-.2),d-2*t], 'charred timber')
     elif kind == "dining":
         top_w, top_d, thick = w * .58, d * .45, .08
         add("table top", [0, h - thick, 0], [top_w, thick, top_d])

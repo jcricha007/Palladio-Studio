@@ -2,6 +2,7 @@
 
 from .scene import MATERIALS
 from .groups import owner
+from .landscape_tools import design_landscape
 
 
 def unreal_vector(vector):
@@ -11,7 +12,8 @@ def unreal_vector(vector):
 
 def unreal_view(project):
     baseline = project["baseline"]
-    terrain = baseline["terrain"]
+    design = design_landscape(baseline, project["scene"])
+    terrain = design["terrain"]
     spacing = terrain["spacing"] * 100
     size = terrain["size"]
     edge = (size - 1) * spacing / 2
@@ -46,10 +48,15 @@ def unreal_view(project):
         "revision": project["revision"],
         "vertices_cm": vertices,
         "triangles": triangles,
+        "baseline_vertices_cm": [[column * spacing - edge, row * spacing - edge,
+            baseline['terrain']['heights'][row * size + column] * 100]
+            for row in range(size) for column in range(size)],
+        "baseline_vegetation": [{"base_cm": unreal_vector(tree['position']), "height_cm": tree['height']*100}
+            for tree in baseline['vegetation']],
         "coastal": baseline["source"]["profile"] == "coastal bluff",
         "vegetation": [
             {"base_cm": unreal_vector(tree["position"]), "height_cm": tree["height"] * 100}
-            for tree in baseline["vegetation"]
+            for tree in design["vegetation"]
         ],
         "elements": elements,
         "environment": project["scene"]["environment"],
