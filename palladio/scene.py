@@ -149,6 +149,9 @@ def edit_scene(scene, command, baseline=None):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if action in {'reference_add','reference_update','reference_remove'}:
+        from .references import edit_reference
+        return edit_reference(scene, command)
     if action in {'terrain_layer','terrain_toggle','terrain_remove','terrain_restore'}:
         from .landscape_tools import edit_terrain
         return edit_terrain(scene, command, baseline)

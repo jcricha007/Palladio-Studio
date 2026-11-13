@@ -51,7 +51,8 @@
           <button id="refresh-models" type="button" hidden>Refresh models</button>
         </div>
         <p id="agent-status" class="muted" role="status" aria-live="polite">Built-in commands use no language model.</p>
-        <p id="agent-privacy" class="muted" hidden>Preview sends your prompt and relevant scene text to Ollama on this computer. No model downloads or remote services are started. Images and autonomous jobs are not supported yet.</p>
+        <p id="agent-privacy" class="muted" hidden>Preview sends your prompt, scene excerpt and explicitly selected reference image to Ollama on this computer. A reference needs a vision-capable local model. No model downloads or remote services are started.</p>
+        <label>Context filter (optional name/type)<input id="agent-query" maxlength="160" placeholder="e.g. garage — selection is always included"></label>
         <form id="prompt-form">
           <label for="request">Design prompt</label>
           <div class="input-row">
@@ -78,6 +79,21 @@
     <aside class="inspector panel" aria-label="Property inspector">
       <div id="inspector">
         <details id="saved-source" hidden><summary>Site source</summary><p id="saved-source-text"></p></details>
+        <details id="reference-board">
+          <summary>Reference board</summary>
+          <p class="muted">Save up to six photos or sketches with chosen design cues. A resized copy stays in this property's history.</p>
+          <label>Saved reference<select id="reference-list"></select></label>
+          <img id="reference-image" hidden alt="Selected design reference">
+          <label><input id="reference-use" type="checkbox">Use selected image for the next agent preview</label>
+          <form id="reference-form" class="stack">
+            <label>Name<input id="reference-name" maxlength="80" value="Reference" required></label>
+            <label>Design cues<textarea id="reference-cues" maxlength="1600" rows="3" placeholder="Use the timber colour and spacing; preserve the current dimensions."></textarea></label>
+            <label>New photo/sketch<input id="reference-file" type="file" accept="image/png,image/jpeg"></label>
+            <button type="submit">Preview adding image</button>
+            <button id="reference-save" type="button">Preview name/cue changes</button>
+            <button id="reference-remove" type="button">Preview remove reference</button>
+          </form>
+        </details>
         <section id="group-panel" hidden>
           <h2 id="group-title">Selected assembly</h2>
           <form id="group-form" class="stack">

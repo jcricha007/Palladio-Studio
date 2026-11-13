@@ -12,6 +12,12 @@ def preview_commands(project, revision, commands):
         raise ValidationError('Preview between 1 and 100 commands.')
     scene = deepcopy(project['scene'])
     changes = [edit_scene(scene, command, project['baseline']) for command in commands]
+    return {'revision': revision, 'commands': deepcopy(commands), 'scene': scene,
+            'summary': ' · '.join(changes), 'changes': changes,
+            'warnings': placement_warnings(project, scene), 'provider': 'tools'}
+
+
+def placement_warnings(project, scene):
     warnings = []
     for group in scene.get('assemblies', []):
         try:
@@ -21,5 +27,4 @@ def preview_commands(project, revision, commands):
             if base > low + .05: warnings.append(f"{group['spec']['name']}: up to {base-low:.2f} m clearance beneath the footprint; supports are not generated.")
         except ValidationError:
             warnings.append(f"{group['spec']['name']}: footprint extends outside the terrain.")
-    return {'revision': revision, 'commands': deepcopy(commands), 'scene': scene,
-            'summary': ' · '.join(changes), 'changes': changes, 'warnings': warnings, 'provider': 'tools'}
+    return warnings

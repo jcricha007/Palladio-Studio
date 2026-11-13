@@ -5,6 +5,24 @@ merged into `main` at `05e3515`. This roadmap distinguishes implemented capabili
 observed validation, and planned work. Milestone numbers describe product areas that can
 advance together. A merged increment does not close every acceptance item in its area.
 
+## Four-PR stack above PR #8
+
+This branch contains implementation beyond `main`. Merge in dependency order; these entries
+are not claims that the work has already merged or passed native acceptance.
+
+| Order | Branch / PR | Delivered in the stack |
+| --- | --- | --- |
+| 1 | `palladio/assembly-placement` · [#9](https://github.com/jcricha007/Palladio-Studio/pull/9) | Persistent groups, stable part IDs, parameter edits, explicit detach and footprint-aware ground placement. |
+| 2 | `palladio/building-landscape` · [#10](https://github.com/jcricha007/Palladio-Studio/pull/10) | Linked stairs, paths/terraces, planters and reversible terrain layers with original-site comparison. |
+| 3 | `palladio/assets-finishes` · [#11](https://github.com/jcricha007/Palladio-Studio/pull/11) | Local OBJ/captured asset library, transferable packets, embedded instances, colour and wood finishes. |
+| 4 | `palladio/reference-agent` | Revisioned image/cue boards, local vision proposals, context filtering and validated group/finish/terrain agent commands. |
+
+At the stack tip, 62 Python tests and seven Node suites pass locally. The Python tests cover
+real loopback HTTP and a fake Ollama runtime; Node uses DOM doubles/pure geometry checks.
+A rendered Chromium smoke test is supplied, but startup was blocked by the development
+environment's socket permissions. UE 5.7 compilation, visual/collision checks, Windows
+PowerShell execution and real-model quality/VRAM remain outstanding. Hosted CI is skipped.
+
 ## Product goal
 
 Work on one persistent, highly detailed property at a time, with a library of independent
@@ -19,7 +37,7 @@ generated. Keep the starting environment as an immutable baseline for comparison
 restoration. Fine detail and long design briefs remain the goal as the current prototype's
 geometry, input limits, and performance mature.
 
-## What is implemented on main
+## Implemented on main at PR #7
 
 | Area | Implemented capability | State and remaining work |
 | --- | --- | --- |
@@ -45,8 +63,8 @@ support experimentation without replacing the original site.
 | Browser rendering | Pending visual acceptance. The development environment could not launch local Chromium or connect its separate cloud browser to the local server. |
 | Real Ollama runtime | Pending installed-model switching, edit quality, latency and VRAM checks alongside Unreal on the Windows workstation. Automated transport tests use a fake runtime. |
 
-The test results above are carried forward from PR #7. This roadmap refresh changes
-documentation only and does not claim another application test run.
+The table above preserves the PR #7 evidence. New checks for the four-PR stack are recorded
+below and do not imply that its Windows or rendered-browser acceptance has passed.
 
 To close the current user acceptance items:
 
@@ -63,7 +81,7 @@ To close the current user acceptance items:
 Run local checks using the commands in [the README](../README.md#develop). Keep hosted CI
 disabled until its use is requested.
 
-## Current boundaries
+## Boundaries recorded at PR #7
 
 - Downloaded sites use a **17 × 17** ground-elevation grid over **20–256 m**. A 128 m site
   has 8 m sample spacing. Prepared JSON imports support odd grids of 3–129 samples per side
@@ -79,7 +97,7 @@ disabled until its use is requested.
   jobs are future capabilities. Preview cancellation ignores late replies but may leave an
   already-started download or model request finishing in the background.
 
-## Next package: persistent assemblies and terrain placement
+## Package 1 acceptance: persistent assemblies and terrain placement
 
 **Outcome:** create a room or garage on a real site, then resize, move, rotate or duplicate
 the whole assembly while preserving its identity, history and matching geometry in both
@@ -97,8 +115,8 @@ viewports.
 Acceptance is a garage placed on the downloaded Blue Ridge site, resized and rotated as
 one object, duplicated as an alternative, restored to an earlier revision and reopened
 offline. The original terrain remains unchanged and unsupported placement is visible
-before Apply. These requirements guide the next implementation PR; this roadmap update
-does not implement them.
+before Apply. These requirements guided stack increment 1. Code and local regression evidence are now
+recorded below; the Windows walkthrough remains open.
 
 ## Packages after that
 
@@ -165,3 +183,32 @@ native projections use corresponding geometry. Group finish overrides survive re
 Local evidence: 54 Python tests and six Node suites pass. Native compilation and interactive
 asset/finish acceptance remain required. Texture/PBR maps, high-detail asset streaming,
 GLTF/FBX import and richer lighting/weather are still future work in the larger milestone.
+
+## Stack increment 4: reference-guided local agent
+
+Implemented on `palladio/reference-agent`: up to six persistent photo/sketch references and
+chosen cues, revisioned add/update/remove, bounded local image copies, opt-in vision input,
+capability/remote-model checks, name/type context filtering, mesh summaries and explicit
+group/layer target scope. The model can propose group parameter changes, placement, copies,
+removal, surface finishes and terrain-layer edits through the same validators as manual tools.
+The native mesh actor receives its transform after root attachment so placement is explicit.
+
+Limits remain deliberate: one browser-selected image per request (two supported by the API),
+up to 12 commands, 40 element excerpts, eight group summaries and twelve terrain layers;
+character limits may reduce these further. No arbitrary file tools, photo-derived exact
+measurements, automatic saves, native agent panel or autonomous long-job execution.
+
+## Where development goes next
+
+1. Complete the Windows walkthrough of this stack: old-property reopening, group editing,
+   terrain restore, imported mesh silhouettes/placement/collision, finishes and reference
+   history. Run the optional rendered test and evaluate a real local vision model alongside
+   Unreal before choosing a default. Record findings rather than treating merge as acceptance.
+2. Deepen building and landscape authoring: connected layouts, roof systems, more useful
+   openings, planted vegetation, water and support/overlap feedback. Preserve group identity.
+3. Improve material/asset fidelity: PBR/texture maps, asset provenance and streaming budgets,
+   richer furnishings/vegetation, and lighting/weather. The current OBJ and coarse wood
+   implementation is a foundation, not completion of this larger milestone.
+4. Build long design jobs on the revisioned command path: durable briefs/references,
+   decomposition, checkpoints, pause/resume and reconciliation after manual edits. Keep
+   Windows delivery and backup/export evolving with these capabilities.

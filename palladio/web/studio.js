@@ -1,4 +1,5 @@
 import {AssetTools} from "./assets.js";
+import {ReferenceTools} from "./references.js";
 import {Viewport} from "./viewport.js";
 import {DesignTools} from "./tools.js";
 import {SitePicker} from "./site-picker.js";
@@ -23,6 +24,7 @@ let agentEndpoint = "http://127.0.0.1:11434";
 const sites = new SitePicker($, api, syncControls);
 const designTools = new DesignTools($, previewTool, discardOnEdit);
 const assetTools = new AssetTools($, {api,run,preview:previewTool,showPlan,state:()=>({project,selected}),invalidate:discardOnEdit});
+const referenceTools = new ReferenceTools($,{run,preview:previewTool,state:()=>({project}),invalidate:discardOnEdit});
 
 function agentStatus(message, error = false) {
   $("agent-status").textContent = message;
@@ -115,17 +117,19 @@ async function previewRequest() {
   const controller = new AbortController();
   agentRequest = controller;
   const snapshot = {id: project.id, revision: project.revision, selection: selected,
-    prompt: $("request").value, provider, model};
+    prompt: $("request").value, provider, model, references:referenceTools.selected(),query:$("agent-query").value};
   agentStatus(provider === "ollama" ? `Waiting for ${model}… No changes have been saved.` : "Preparing command preview…");
   syncControls();
   try {
     const plan = await api(propertiesPath + "/" + snapshot.id + "/preview", {
       prompt: snapshot.prompt, selection: snapshot.selection, revision: snapshot.revision,
       provider, ...(provider === "ollama" ? {model} : {}),
+      references:snapshot.references,query:snapshot.query,
     }, controller.signal);
     if (generation !== agentGeneration || project?.id !== snapshot.id ||
         project?.revision !== snapshot.revision || selected !== snapshot.selection ||
         $("request").value !== snapshot.prompt || $("agent-provider").value !== provider ||
+        $("agent-query").value !== snapshot.query || JSON.stringify(referenceTools.selected())!==JSON.stringify(snapshot.references) ||
         (provider === "ollama" && $("agent-model").value !== model)) return;
     if (plan.revision !== project.revision) throw new Error("This property changed. Reopen it and preview again.");
     showPlan(plan);
@@ -174,6 +178,8 @@ function status(message, error = false) {
 function syncControls() {
   designTools.sync(busy || !project || baselineView);
   assetTools.sync(busy || !project || baselineView,selected);
+  referenceTools.sync(busy || !project || baselineView);
+  $("agent-query").disabled=busy || !project || baselineView;
   $("new-property").disabled = busy || !catalog;
   $("empty-create").disabled = busy || !catalog;
   $("duplicate").disabled = busy || !project;
@@ -204,7 +210,7 @@ async function run(operation, onError = error => status(error.message, true)) {
   busy = true;
   syncControls();
   try {
-    await operation();
+    return await operation();
   } catch (error) {
     onError(error);
   } finally {
@@ -251,9 +257,11 @@ function showPlan(plan = null) {
     ? `Local model: ${plan.model} · Suggested response · Revision ${plan.revision} · Not saved`
     : `${plan.provider === "tools" ? "Manual tools" : "Built-in commands"} · Revision ${plan.revision} · Not saved`) : "";
   $("proposal-commands-detail").open = false;
-  $("proposal-commands").textContent = plan ? JSON.stringify(plan.commands || (plan.command ? [plan.command] : []), null, 2) : "";
+  $("proposal-commands").textContent = plan ? JSON.stringify(plan.commands || (plan.command ? [plan.command] : []),
+    (key,value)=>key==='image' && typeof value==='string'?'[local reference image; bytes omitted from this display]':value,2) : "";
   $("proposal-changes").replaceChildren();
-  for (const change of [...(plan?.changes || []), ...(plan?.warnings || [])]) {
+  for (const change of [...(plan?.changes || []), ...(plan?.warnings || []),
+    ...(plan?.reference_names?.length ? ['Reference images: '+plan.reference_names.join(', ')]:[])]) {
     const item = document.createElement("li");
     item.textContent = change;
     $("proposal-changes").append(item);
@@ -335,6 +343,7 @@ function displayTime(hour) {
 }
 
 function render() {
+  referenceTools.render(project);
   $("empty-state").hidden = Boolean(project);
   $("view").hidden = !project || !viewport;
   $("inspector").hidden = !project;
@@ -534,6 +543,8 @@ $("prompt-form").addEventListener("submit", event => {
   previewRequest();
 });
 $("agent-provider").addEventListener("change", changeAgent);
+$("agent-query").addEventListener("input",discardOnEdit);
+$("agent-query").addEventListener("change",discardOnEdit);
 $("agent-model").addEventListener("change", () => {
   cancelAgentRequest();
   showPlan();

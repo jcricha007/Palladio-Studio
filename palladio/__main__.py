@@ -25,6 +25,7 @@ STATIC = {
     "/site-picker.js": ("site-picker.js", "text/javascript"),
     "/mesh.js": ("mesh.js", "text/javascript"),
     "/assets.js": ("assets.js", "text/javascript"),
+    "/references.js": ("references.js", "text/javascript"),
     "/tools.js": ("tools.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
@@ -44,7 +45,7 @@ def handler_for(library, agent=None, sites=None):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Security-Policy",
-                             "default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+                             "default-src 'self'; img-src 'self' data: blob:; base-uri 'none'; frame-ancestors 'none'")
             self.end_headers()
             try:
                 self.wfile.write(body)
@@ -174,7 +175,7 @@ def handler_for(library, agent=None, sites=None):
                     project = library.get(match[1])
                     plan = agent.preview(project, data.get("prompt"), data.get("selection"),
                                          provider=data.get("provider", "rules"), model=data.get("model"),
-                                         revision=data.get("revision"))
+                                         revision=data.get("revision"),references=data.get('references'),query=data.get('query',''))
                     if library.get(match[1])["revision"] != plan["revision"]:
                         raise RevisionConflict("This property changed while the agent was planning. Reload it and preview again.")
                     self.json_response(200, plan)

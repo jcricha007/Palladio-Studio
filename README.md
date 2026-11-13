@@ -53,11 +53,11 @@ For the Windows navigation check:
 3. Switch back to the design and fly over open ground by the pavilion entrance. Press **3**. Walk through the open entrance and into a wall to check that the wall stops movement. Walk outside onto sloping terrain, then press **1** to fly again.
 4. Move an element while orbiting it. The orbit should follow it after the save and the browser should show the new revision.
 
-The preview uses basic material colors and simple sunlight and fog. Richer weather and a packaged Windows build are follow-up work.
+The preview uses solid/per-face colours, coarse procedural wood finishes and simple sunlight and fog. Richer weather and a packaged Windows build are follow-up work.
 
 ## Current scope
 
-The studio includes procedural landscapes, imported and downloaded elevation, a WebGL orbit viewport, editable architectural pieces and linked assemblies, material swatches, atmosphere controls, property duplication, and revision history. The Unreal developer preview opens the same saved properties and commits element moves to the same history. Built-in commands and an optional local Ollama adapter propose edits through the shared command interface. Detailed materials and assets, persistent parametric assemblies, visual references, terrain editing, and autonomous design jobs remain on the roadmap.
+This checkout includes procedural/imported/downloaded terrain, linked building and furnishing assemblies, ground placement, reversible terrain layers, reusable triangle assets, solid/wood finishes, atmosphere controls, duplication and revision history. The Unreal developer preview opens the same properties and commits element/group moves. A saved reference board and bounded local Ollama proposals share manual Preview/Apply. Texture/PBR maps, more detailed building/landscape tools, richer atmosphere and autonomous design jobs remain on the roadmap. See the roadmap for merged versus stacked work and outstanding acceptance.
 
 ## Develop
 
@@ -66,6 +66,10 @@ py -m unittest discover -s tests -v
 node tests/test_assembly_ui.cjs
 node tests/test_agent_ui.cjs
 node tests/test_site_ui.cjs
+node tests/test_tools_ui.cjs
+node tests/test_assets_ui.cjs
+node tests/test_mesh.cjs
+node tests/test_reference_ui.cjs
 ```
 
 | Path | Responsibility |
@@ -92,7 +96,8 @@ and a lounge set. Start with a blank property to avoid overlapping the starter p
 2. Click **Preview assembly**. The added geometry is temporary until **Apply**; **Discard**
    returns to the saved property. Changing a field or property also clears the proposal.
 3. Apply once to save all generated pieces in one revision. Each piece then appears in
-   the scene list and can be edited or removed individually using the existing inspector.
+   the scene list. Part name/material/finish edits remain overrides; detach the group before
+   editing individual geometry or removing an individual part.
 4. Press **R** in the Unreal preview to load the saved pieces. The same IDs, positions,
    dimensions and materials are projected into Unreal. Use history to restore the entire
    addition, or duplicate the property before experimenting.
@@ -210,7 +215,9 @@ The transport uses a 120-second socket inactivity timeout, not an absolute job d
 
 A replaceable planner receives the prompt, current revision, selection, environment,
 material/assembly catalogs, and a bounded scene excerpt (up to 40 elements, selected first,
-then nearby). It returns schema-constrained JSON, not executable code. Every command is
+then nearby). Optional name/type filtering narrows that excerpt. Up to eight linked group
+summaries and twelve terrain layers are included within its character budget; imported mesh
+geometry is summarized. A selected reference carries its saved design cues. It returns schema-constrained JSON, not executable code. Every command is
 checked against the allowlist and existing scene validators on a private copy. Only explicit
 Apply uses the existing revision-checked transaction. A concurrent edit invalidates the
 proposal rather than overwriting it. Existing-object edits can target only IDs included in
@@ -218,11 +225,12 @@ the supplied excerpt. Full-scene reasoning is not promised; context is character
 not token-counted, so a runtime may still truncate an unusually large/non-ASCII request.
 
 Supported commands: add/update/remove simple elements, add supported assemblies,
-and change atmosphere. A proposal can contain at most 12 commands. Newly added objects
+resize/place/copy/remove visible groups, edit finishes, add/toggle/remove visible terrain
+layers, and change atmosphere. A proposal can contain at most 12 commands. Newly added objects
 cannot be referred to by ID later in the same proposal. Model-generated geometry uses the
-same schematic assets as manual editing, not photorealistic generation. No images, shell
-execution, arbitrary Python, filesystem tools, automatic saves, model installation, autonomous
-jobs, or native Unreal agent panel are included. Browser model selection does not change the
+same schematic assets as manual editing, not photorealistic generation. Selected reference images are supported by local vision models. Shell execution, arbitrary
+Python, filesystem tools, automatic saves, model installation, autonomous jobs and a native
+Unreal agent panel are not included. Browser model selection does not change the
 renderer. A model can still misunderstand intent, so inspect the preview before applying.
 
 No default model is imposed. Gemma/Ministral candidates can be compared after installing
@@ -309,3 +317,46 @@ Local checks now also include `node tests/test_assets_ui.cjs` and `node tests/te
 Windows acceptance: import the sample bench, place/rotate it, capture a room, export/reimport
 its packet, change a part to wood, resize the group, restore history and reopen offline.
 Rebuild Unreal and verify imported silhouettes, finish colours, selection and collision.
+
+## Reference board and broader agent edits
+
+Open **Reference board**, choose a PNG/JPEG photo or sketch (up to 10 MB), name it and describe
+the cues you want to use. **Preview adding image**, then **Apply** saves a bounded JPEG copy
+with the property. The browser limits its longest side to 1024 pixels and strips file
+metadata; the original file is unchanged. The server checks format headers, dimensions and
+size (500 KB / 2048 pixels maximum). This is header validation, not a complete image decoder.
+Keep up to six references; name/cue edits, removal and history restore are revisioned.
+
+Select a saved image and check **Use selected image for the next agent preview**. Choose a
+local Ollama vision model. Try “Use the timber colour from this reference on the selected
+wall; preserve its size,” then inspect every command before Apply. A text-only or remote
+model is rejected before sending scene content/images. Only the selected image is sent;
+its cues remain text evidence. Uncheck it to return to text-only or Built-in commands.
+The HTTP interface accepts up to two selected references; the current browser chooses one.
+
+Use **Context filter** for a name/type such as “garage” to narrow a large property. The current
+selection is always included. Whole-group tools use explicit group IDs and affect every
+linked part; the supplied group summary states the part count. Omitted groups/layers cannot
+be edited by the model. Ground/footprint warnings accompany previews. Group detachment,
+raw mesh generation, reference-board edits and asset-file access remain manual operations.
+The planner is still one bounded proposal, not a long autonomous job or a photo-to-CAD tool.
+
+The adapter follows Ollama's [vision request format](https://docs.ollama.com/capabilities/vision)
+and checks [reported model capabilities](https://docs.ollama.com/api-reference/show-model-details).
+Wire tests use a fake local runtime; actual model interpretation, latency and VRAM with Unreal
+still need evaluation on Windows. Photos do not establish exact dimensions.
+
+Run all dependency-free checks from a fresh PowerShell terminal after checking out the stack:
+
+```powershell
+Set-Location (Join-Path $env:USERPROFILE 'Palladio-Studio')
+& .\scripts\Validate-Palladio.ps1
+```
+
+The optional rendered check uses temporary properties and a fake model. Install Playwright
+and its Chromium browser separately, then run `py tests/browser_smoke.py` or pass
+`-BrowserSmoke` to the validation script. It covers group resize, finish/terrain edits, OBJ
+placement, image normalization, a vision proposal, Apply and reopen. It could not run in the
+development environment because Chromium's startup socket was blocked; it is not recorded
+as passing. Windows acceptance must also rebuild Unreal, verify mesh placement/collision,
+exercise history restore and test a real local vision model.

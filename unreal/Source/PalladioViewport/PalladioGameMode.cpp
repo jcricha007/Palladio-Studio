@@ -199,10 +199,13 @@ void APalladioGameMode::AddMesh(const TSharedPtr<FJsonObject>& Element, bool bSe
     Base.Z -= VectorField(Element, TEXT("dimensions_cm")).Z / 2;
     auto* Actor = GetWorld()->SpawnActor<AActor>(Base, FRotator(0, Element->GetNumberField(TEXT("yaw_degrees")), 0));
     auto* Mesh = NewObject<UProceduralMeshComponent>(Actor);
+    Mesh->SetMobility(EComponentMobility::Movable);
     Actor->SetRootComponent(Mesh);
     Mesh->SetCollisionProfileName(TEXT("BlockAll"));
     Mesh->bUseComplexAsSimpleCollision = true;
     Mesh->RegisterComponent();
+    // A plain AActor has no root when spawned; set its transform after attaching one.
+    Actor->SetActorLocationAndRotation(Base, FRotator(0, Element->GetNumberField(TEXT("yaw_degrees")), 0));
     int32 SectionIndex = 0;
     for (const auto& Value : Element->GetArrayField(TEXT("mesh_sections")))
     {
