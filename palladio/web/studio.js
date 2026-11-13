@@ -1,3 +1,4 @@
+import {AssetTools} from "./assets.js";
 import {Viewport} from "./viewport.js";
 import {DesignTools} from "./tools.js";
 import {SitePicker} from "./site-picker.js";
@@ -21,6 +22,7 @@ let installedModels = [];
 let agentEndpoint = "http://127.0.0.1:11434";
 const sites = new SitePicker($, api, syncControls);
 const designTools = new DesignTools($, previewTool, discardOnEdit);
+const assetTools = new AssetTools($, {api,run,preview:previewTool,showPlan,state:()=>({project,selected}),invalidate:discardOnEdit});
 
 function agentStatus(message, error = false) {
   $("agent-status").textContent = message;
@@ -171,6 +173,7 @@ function status(message, error = false) {
 
 function syncControls() {
   designTools.sync(busy || !project || baselineView);
+  assetTools.sync(busy || !project || baselineView,selected);
   $("new-property").disabled = busy || !catalog;
   $("empty-create").disabled = busy || !catalog;
   $("duplicate").disabled = busy || !project;
@@ -366,6 +369,7 @@ function render() {
   $("hour").value = displayTime(scene.environment.hour);
   $("rain").classList.toggle("active", scene.environment.weather === "rain");
   designTools.render(project, selected);
+  assetTools.render(project,selected,catalog.materials);
   const target = items.find(item => item.id === selected);
   $("element").hidden = !target;
   if (target) {

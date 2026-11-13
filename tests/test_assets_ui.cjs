@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const nodes=new Map(),find=id=>{if(!nodes.has(id))nodes.set(id,{value:'',files:[],events:{},addEventListener(n,f){this.events[n]=f;},querySelectorAll(){return [];},replaceChildren(...items){this.items=items;this.value=items[0]?.value||'';}});return nodes.get(id);};
+let task,commands,plan,invalidations=0,calls=[],project={id:'p',revision:4,scene:{elements:[{id:'e',material:'oak',mesh:{colors:['#ffffff']}}]}};
+const hooks={run:f=>{task=f();},api:async(path,data)=>{calls.push({path,data});return path==='/api/assets'?[{id:'asset',name:'Chair',triangles:12}]:path.endsWith('asset-preview')?{revision:4,commands:[]}: {id:'asset'};},state:()=>({project,selected:'e'}),preview:c=>commands=c,showPlan:p=>plan=p,invalidate:()=>invalidations++};
+const context=vm.createContext({find,hooks,Option:function(label,value){this.value=value;},setTimeout});
+vm.runInContext(fs.readFileSync('palladio/web/assets.js','utf8').replace('export class','class')+'\nconst assets=new AssetTools(find,hooks);',context);
+(async()=>{
+  context.project=project;vm.runInContext('assets.render(project,"e",{oak:"#b78554"})',context);
+  assert.equal(find('finish-source').checked,true);
+  find('finish-reset').events.click();assert.equal(commands[0].element.finish,null);
+  find('finish-form').events.input();assert.equal(invalidations,1);
+  find('asset-name').value='Chair';find('asset-units').value='cm';find('asset-file').files=[{size:20,name:'chair.obj',text:async()=>'v 0 0 0'}];
+  find('asset-import-form').events.submit({preventDefault(){}});await task;
+  assert.equal(calls[0].data.units,'cm');assert.equal(calls[0].data.format,'obj');
+  find('asset-place').events.click();await task;assert.equal(plan.revision,4);
+  assert.equal(calls.at(-1).data.revision,4);assert.equal(calls.at(-1).data.asset_id,'asset');
+  find('asset-capture').events.click();await task;assert.equal(calls.at(-2).data.selection,'e');
+  find('asset-file').files=[{size:750001}];find('asset-import-form').events.submit({preventDefault(){}});
+  await assert.rejects(task,/750 KB/);
+  console.log('PASS: asset import bounds, capture, preview and finish controls');
+})().catch(error=>{console.error(error);process.exitCode=1;});

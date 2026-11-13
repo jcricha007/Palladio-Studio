@@ -283,3 +283,29 @@ Acceptance: add two terrain layers, toggle the first, preview a stair and terrac
 original ground, then restore a prior revision. Verify both views and walking collision in
 Unreal after rebuilding. Arbitrary roofs, planted vegetation, water and fine landscape
 assets remain later increments.
+
+## Reusable assets and finishes
+
+Open **Reusable assets**, enter a name, choose `examples/bench.obj`, choose metres and
+import. OBJ input must have triangular faces (up to 4,096 triangles / 8,192 vertices).
+The units selector supports metres, centimetres, millimetres and inches. Material-file
+references are ignored; no files or URLs named inside an OBJ are opened. GLTF, FBX and
+texture maps are not included. Import does not add anything to a property until you preview
+placement and Apply.
+
+Capture a selected object or its whole linked assembly to reuse its current geometry and
+colours. Captured assets are flattened meshes, so they do not retain generator parameters.
+Export a Palladio asset JSON file to transfer it to another local library. Asset packets
+live beside the property database; inserted instances also embed their geometry so a missing
+library packet cannot break an existing property. Capture has the same complexity limits.
+
+**Surface finish** previews custom colours or coarse procedural wood grain, including grain
+spacing and direction. Imported per-face colours can be retained or replaced. Group-part
+finishes survive parameter edits. Reset returns to the base material/source colours. Both
+views receive the same triangle geometry and colours; this is not a PBR texture workflow.
+Roughness maps, image textures, high-detail streaming and richer atmosphere remain open.
+
+Local checks now also include `node tests/test_assets_ui.cjs` and `node tests/test_mesh.cjs`.
+Windows acceptance: import the sample bench, place/rotate it, capture a room, export/reimport
+its packet, change a part to wood, resize the group, restore history and reopen offline.
+Rebuild Unreal and verify imported silhouettes, finish colours, selection and collision.

@@ -110,7 +110,7 @@ def element(data):
     material = required_text(data.get("material"), "Material", 40)
     if kind not in ELEMENTS or material not in MATERIALS:
         raise ValidationError("Choose a supported element type and material.")
-    return {
+    result = {
         "kind": kind,
         "name": required_text(data.get("name"), "Element name", 100),
         "material": material,
@@ -118,6 +118,13 @@ def element(data):
         "size": vector(data.get("size"), "Size (m)", 0.05, 300),
         "yaw": number(data.get("yaw", 0), "Rotation (degrees)", -360, 360),
     }
+    if 'mesh' in data:
+        from .geometry import mesh
+        result['mesh'] = mesh(data['mesh'])
+    if data.get('finish') is not None:
+        from .geometry import finish
+        result['finish'] = finish(data['finish'])
+    return result
 
 
 def starter_elements():
@@ -164,12 +171,13 @@ def edit_scene(scene, command, baseline=None):
             return f"Removed {target['name']}"
         changes = command.get("element")
         if not isinstance(changes, dict) or not changes.keys() <= {
-            "kind", "name", "material", "position", "size", "yaw"
+            "kind", "name", "material", "position", "size", "yaw", "finish"
         }:
             raise ValidationError("Invalid element fields.")
         checked = element({**target, **changes})
         member_edit(scene, target, {key: value for key, value in changes.items() if value != target.get(key)})
         target.update(checked)
+        if "finish" in changes and changes["finish"] is None: target.pop("finish", None)
         return f"Edited {target['name']}"
     if action == "environment":
         changes = command.get("environment")

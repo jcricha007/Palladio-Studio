@@ -18,7 +18,7 @@ const storage = new Map();
 const updates = [];
 let requests = [], responder;
 const context = vm.createContext({
-  console,DesignTools:class{sync(){}render(){}}, AbortController,
+  console,DesignTools:class{sync(){}render(){}},AssetTools:class{sync(){}render(){}}, AbortController,
   Option:function(label,value) { this.label=label; this.value=value; },
   localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},
   document:{getElementById:node,querySelectorAll:()=>[...nodes.values()],createElement:()=>new Node()},

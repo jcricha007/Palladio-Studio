@@ -2,7 +2,7 @@
 from copy import deepcopy
 from uuid import uuid4
 from .assemblies import generate_assembly
-from .scene import ValidationError
+from .scene import ValidationError, element
 from .placement import place_spec
 
 
@@ -25,7 +25,7 @@ def regenerate(scene, group, data):
     for piece in pieces:
         role = piece['role']
         members[role] = old_members.get(role, str(uuid4()))
-        generated.append({**piece, **overrides.get(role, {}), 'id': members[role]})
+        generated.append({**element({**piece, **overrides.get(role, {})}), 'role': role, 'id': members[role]})
     missing = set(overrides) - set(members)
     if missing:
         raise ValidationError('This change removes overridden parts. Detach the assembly before changing its topology.')

@@ -1,3 +1,4 @@
+import {surfaceTriangles} from "./mesh.js";
 // WebGL adapter for the local-metre scene. Persistence and commands live in Python.
 const add = (a, b) => a.map((value, i) => value + b[i]);
 const sub = (a, b) => a.map((value, i) => value - b[i]);
@@ -269,8 +270,14 @@ export class Viewport {
     this.environment = (baselineView ? project.baseline : project.scene).environment;
     const vertices = this.terrain.slice();
     for (const item of this.items) {
-      const color = tint(materials[item.material]);
-      box(vertices, item, item.id === selected ? add(scale(color, .72), [.28, .25, .15]) : color);
+      const chosen = item.id === selected;
+      const color = tint(item.finish?.color || materials[item.material]);
+      if (item.mesh || item.finish?.pattern === 'wood') {
+        for (const surface of surfaceTriangles(item, materials[item.material])) {
+          const points=surface.points.map(p=>add(item.position,rotate(p,item.yaw*Math.PI/180)));
+          triangle(vertices,...points,chosen?add(scale(surface.color,.72),[.28,.25,.15]):surface.color);
+        }
+      } else box(vertices, item, chosen ? add(scale(color, .72), [.28, .25, .15]) : color);
     }
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertices), this.gl.STATIC_DRAW);
     this.count = vertices.length / 6;

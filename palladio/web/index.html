@@ -138,6 +138,43 @@
           </form>
         </details>
         <hr>
+        <details>
+          <summary>Reusable assets</summary>
+          <p class="muted">Import a triangulated OBJ or capture a selection. Capturing an assembly freezes its current shape as a mesh.</p>
+          <form id="asset-import-form" class="stack">
+            <label>Asset name<input id="asset-name" maxlength="80" value="My asset" required></label>
+            <label>OBJ / asset JSON<input id="asset-file" type="file" accept=".obj,.json" required></label>
+            <label>OBJ units<select id="asset-units"><option value="m">Metres</option><option value="cm">Centimetres</option><option value="mm">Millimetres</option><option value="in">Inches</option></select></label>
+            <button type="submit">Import into library</button>
+            <button id="asset-capture" type="button">Capture selection</button>
+          </form>
+          <div id="asset-placement" class="stack">
+            <button id="asset-refresh" type="button">Refresh assets</button>
+            <label>Saved asset<select id="asset-list"></select></label>
+            <div class="triplet">
+              <label>X<input id="asset-x" type="number" value="0" step="any"></label>
+              <label>Y<input id="asset-y" type="number" value="0" step="any"></label>
+              <label>Z<input id="asset-z" type="number" value="0" step="any"></label>
+            </div>
+            <label>Rotation<input id="asset-yaw" type="number" value="0" step="any"></label>
+            <button id="asset-place" type="button">Preview asset placement</button>
+            <button id="asset-export" type="button">Export asset JSON</button>
+          </div>
+          <p id="asset-status" role="status" class="muted"></p>
+        </details>
+        <section id="finish-panel" hidden>
+          <h2>Selected finish</h2>
+          <form id="finish-form" class="stack">
+            <label>Colour<input id="finish-color" type="color" value="#b78554"></label>
+            <label>Pattern<select id="finish-pattern"><option value="solid">Solid</option><option value="wood">Wood grain</option></select></label>
+            <label>Grain spacing (m)<input id="finish-scale" type="number" value="0.25" min="0.02" max="10" step="any" required></label>
+            <label>Grain direction<input id="finish-rotation" type="number" value="0" min="-360" max="360" step="any" required></label>
+            <label class="checkbox"><input id="finish-source" type="checkbox">Use imported triangle colours</label>
+            <button type="submit">Preview finish</button>
+            <button id="finish-reset" type="button">Preview original finish</button>
+          </form>
+        </section>
+        <hr>
         <h2>Assembly builder</h2>
         <form id="assembly-form" class="stack">
           <p class="muted">Preview simple room shells and furnishing sets, then save them as linked assemblies. Select a saved part to edit its assembly.</p>

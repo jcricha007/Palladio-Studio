@@ -193,6 +193,45 @@ void APalladioGameMode::AddShape(UStaticMesh* Mesh, const FVector& Center, const
     Shapes.Add(Actor);
 }
 
+void APalladioGameMode::AddMesh(const TSharedPtr<FJsonObject>& Element, bool bSelected)
+{
+    FVector Base = VectorField(Element, TEXT("center_cm"));
+    Base.Z -= VectorField(Element, TEXT("dimensions_cm")).Z / 2;
+    auto* Actor = GetWorld()->SpawnActor<AActor>(Base, FRotator(0, Element->GetNumberField(TEXT("yaw_degrees")), 0));
+    auto* Mesh = NewObject<UProceduralMeshComponent>(Actor);
+    Actor->SetRootComponent(Mesh);
+    Mesh->SetCollisionProfileName(TEXT("BlockAll"));
+    Mesh->bUseComplexAsSimpleCollision = true;
+    Mesh->RegisterComponent();
+    int32 SectionIndex = 0;
+    for (const auto& Value : Element->GetArrayField(TEXT("mesh_sections")))
+    {
+        const auto& Section = Value->AsObject();
+        TArray<FVector> Vertices;
+        TArray<int32> Indices;
+        for (const auto& PointValue : Section->GetArrayField(TEXT("vertices_cm")))
+        {
+            const auto& Point = PointValue->AsArray();
+            Vertices.Emplace(Point[0]->AsNumber(), Point[1]->AsNumber(), Point[2]->AsNumber());
+        }
+        for (const auto& Index : Section->GetArrayField(TEXT("triangles"))) Indices.Add(static_cast<int32>(Index->AsNumber()));
+        TArray<FVector> Normals;
+        Normals.Init(FVector::ZeroVector, Vertices.Num());
+        for (int32 Index = 0; Index < Indices.Num(); Index += 3)
+        {
+            const int32 A = Indices[Index], B = Indices[Index + 1], C = Indices[Index + 2];
+            const FVector Normal = FVector::CrossProduct(Vertices[C] - Vertices[A], Vertices[B] - Vertices[A]);
+            Normals[A] += Normal; Normals[B] += Normal; Normals[C] += Normal;
+        }
+        for (FVector& Normal : Normals) Normal.Normalize();
+        Mesh->CreateMeshSection_LinearColor(SectionIndex, Vertices, Indices, Normals,
+            TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), true);
+        Mesh->SetMaterial(SectionIndex, Tint(bSelected ? FColor::FromHex(TEXT("F0BC6A")) : FColor::FromHex(Section->GetStringField(TEXT("color")))));
+        ++SectionIndex;
+    }
+    Shapes.Add(Actor);
+}
+
 void APalladioGameMode::BuildLandscape(const TSharedPtr<FJsonObject>& View)
 {
     TArray<FVector> Vertices;
@@ -265,7 +304,8 @@ void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
             const auto& Element = Value->AsObject();
             const FVector Center = VectorField(Element, TEXT("center_cm"));
             const bool bSelected = Element->GetStringField(TEXT("id")) == Selection;
-            AddShape(Cube, Center, VectorField(Element, TEXT("dimensions_cm")),
+            if (Element->HasTypedField<EJson::Array>(TEXT("mesh_sections"))) AddMesh(Element, bSelected);
+            else AddShape(Cube, Center, VectorField(Element, TEXT("dimensions_cm")),
                 Element->GetNumberField(TEXT("yaw_degrees")), FColor::FromHex(Element->GetStringField(TEXT("color"))),
                 bSelected, true);
             if (bSelected)

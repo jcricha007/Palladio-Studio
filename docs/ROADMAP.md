@@ -154,3 +154,14 @@ planting tools and water remain open within this roadmap area.
 
 Local evidence: 48 Python tests and four Node suites pass. Manual browser rendering and
 native UE 5.7 compilation, collision refresh and baseline switching remain required.
+
+## Stack increment 3: reusable geometry and finishes
+
+Implemented on `palladio/assets-finishes`: bounded triangulated OBJ import with explicit
+units; whole-selection capture; immutable, exportable local asset packets; embedded scene
+instances; per-face colours and solid/wood finishes with scale and direction. Browser and
+native projections use corresponding geometry. Group finish overrides survive regeneration.
+
+Local evidence: 54 Python tests and six Node suites pass. Native compilation and interactive
+asset/finish acceptance remain required. Texture/PBR maps, high-detail asset streaming,
+GLTF/FBX import and richer lighting/weather are still future work in the larger milestone.

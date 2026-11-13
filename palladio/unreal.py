@@ -2,6 +2,7 @@
 
 from .scene import MATERIALS
 from .groups import owner
+from .geometry import surface_triangles
 from .landscape_tools import design_landscape
 
 
@@ -33,6 +34,13 @@ def unreal_view(project):
         dimensions = unreal_vector(element["size"])
         center = unreal_vector(element["position"])
         center[2] += dimensions[2] / 2
+        sections = {}
+        if 'mesh' in element or element.get('finish', {}).get('pattern') == 'wood':
+            for points, tint in surface_triangles(element):
+                section = sections.setdefault(tint, {'color':tint,'vertices_cm':[],'triangles':[]})
+                start = len(section['vertices_cm'])
+                section['vertices_cm'].extend(unreal_vector(point) for point in points)
+                section['triangles'].extend((start,start+1,start+2))
         elements.append({
             "id": element["id"],
             "name": element["name"],
@@ -41,7 +49,8 @@ def unreal_view(project):
             "center_cm": center,
             "dimensions_cm": dimensions,
             "yaw_degrees": -element["yaw"],
-            "color": MATERIALS[element["material"]],
+            "color": element.get('finish', {}).get('color', MATERIALS[element["material"]]),
+            **({'mesh_sections':list(sections.values())} if sections else {}),
         })
     return {
         "name": project["name"],

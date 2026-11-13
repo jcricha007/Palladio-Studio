@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const context=vm.createContext({});
+vm.runInContext(fs.readFileSync('palladio/web/mesh.js','utf8').replace('export function','function'),context);
+const surface=(item)=>{context.item=item;return JSON.parse(JSON.stringify(vm.runInContext('surfaceTriangles(item,"#b78554")',context)));};
+const item={size:[2,3,4],finish:{color:'#804020',pattern:'wood',scale_m:.35,rotation:0}};
+const wood=surface(item);assert.equal(wood.length,768);
+assert.equal(Math.max(...wood.flatMap(t=>t.points.map(p=>p[1]))),3);
+const rotated=surface({...item,finish:{...item.finish,rotation:90}});
+assert.notDeepEqual(wood.map(t=>t.color),rotated.map(t=>t.color));
+const imported={size:[2,3,4],mesh:{vertices:[[-.5,0,-.5],[.5,0,-.5],[0,1,.5]],triangles:[0,1,2],colors:['#ff0000']}};
+assert.deepEqual(surface(imported)[0],{points:[[-1,0,-2],[1,0,-2],[0,3,2]],color:[1,0,0]});
+assert.deepEqual(surface({...imported,finish:{color:'#0000ff',source_colors:false}})[0].color,[0,0,1]);
+console.log('PASS: mesh dimensions, source colours, finish override and wood orientation');
