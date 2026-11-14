@@ -16,3 +16,11 @@ packets and local runtime configuration are not part of a snapshot.
 Acceptance: export a furnished property, import it into a second library, resize a linked
 assembly, compare original terrain and reopen offline. Windows/browser acceptance remains
 pending; regression evidence is recorded in each PR.
+
+## 2 · Layout sets and measurements
+
+Add scene selections to a layout set. Linked members resolve to their whole assembly once.
+Preview moving, copying, rotating about the first object's origin, aligning or distributing
+origins, or snapping them to a metre grid. Measurement reports world-axis bounds of actual
+mesh/box geometry and, for two objects, origin distance. All edits remain atomic and
+revisioned. These are positioning aids; alignment does not create joints or solve collisions.

@@ -149,6 +149,9 @@ def edit_scene(scene, command, baseline=None):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if action=='layout':
+        from .layout import edit_layout
+        return edit_layout(scene,command,baseline)
     if action in {'reference_add','reference_update','reference_remove'}:
         from .references import edit_reference
         return edit_reference(scene, command)
