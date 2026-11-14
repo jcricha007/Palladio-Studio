@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 import webbrowser
 
 from .assets import AssetStore
+from .jobs import DesignJobs
 from .finishes import PRESETS
 from .transfer import snapshot, MAX_BYTES
 from .commands import preview_commands
@@ -33,6 +34,7 @@ STATIC = {
     "/layout.js": ("layout.js", "text/javascript"),
     "/roofs.js": ("roofs.js", "text/javascript"),
     "/rooms.js": ("rooms.js", "text/javascript"),
+    "/jobs.js": ("jobs.js", "text/javascript"),
     "/presentation.js": ("presentation.js", "text/javascript"),
     "/finishes.js": ("finishes.js", "text/javascript"),
     "/planting.js": ("planting.js", "text/javascript"),
@@ -43,7 +45,11 @@ STATIC = {
 PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(geometry-export|schedule|measure|export|duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
 
 
+JOB_ROUTE=re.compile(r"/api/properties/([a-f0-9-]{36})/jobs(?:/([a-f0-9-]{36}))?")
+
+
 def handler_for(library, agent=None, sites=None):
+    jobs=DesignJobs(library)
     agent = agent or AgentService()
     assets = AssetStore(library.path.parent / (library.path.stem + "-assets"))
     sites = sites or SiteService(library.path.parent / (library.path.stem + "-sites"))
@@ -95,6 +101,11 @@ def handler_for(library, agent=None, sites=None):
                 return
             if path == "/api/properties":
                 self.json_response(200, library.list())
+                return
+            job_match=JOB_ROUTE.fullmatch(path)
+            if job_match:
+                try:self.json_response(200,jobs.get(job_match[1],job_match[2]) if job_match[2] else jobs.list(job_match[1]))
+                except MissingProject as error:self.json_response(404,{'error':str(error)})
                 return
             match = PROPERTY_ROUTE.fullmatch(path)
             if match and match[2] in (None, "unreal", "export", "schedule"):
@@ -166,6 +177,10 @@ def handler_for(library, agent=None, sites=None):
                         elevation=elevation,
                     )
                     self.json_response(201, result)
+                    return
+                job_match=JOB_ROUTE.fullmatch(path)
+                if job_match:
+                    self.json_response(200 if job_match[2] else 201,jobs.change(job_match[1],job_match[2],data) if job_match[2] else jobs.create(job_match[1],data))
                     return
                 match = PROPERTY_ROUTE.fullmatch(path)
                 if match and match[2] == "duplicate":

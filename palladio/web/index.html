@@ -208,6 +208,25 @@
           </div>
           <p id="asset-status" role="status" class="muted"></p>
         </details>
+        <details id="jobs-panel" class="stack">
+          <summary>Design jobs</summary>
+          <p class="muted">Keep a brief and ordered steps across sessions. Complete each step with a reviewed property revision and a checkpoint note.</p>
+          <form id="job-form" class="stack">
+            <label>Title<input id="job-title" maxlength="100" required></label>
+            <label>Design brief<textarea id="job-brief" maxlength="64000" rows="4" required></textarea></label>
+            <label>Ordered steps · one per line<textarea id="job-steps" rows="5" required></textarea></label>
+            <button type="submit">Save design job</button>
+          </form>
+          <label>Saved jobs<select id="job-list"></select></label>
+          <button id="job-refresh" type="button">Refresh jobs</button>
+          <pre id="job-details" class="job-details"></pre>
+          <button id="job-start" type="button">Start job</button>
+          <button id="job-pause" type="button">Pause job</button>
+          <button id="job-resume" type="button">Resume job</button>
+          <label>Checkpoint note<input id="job-note" maxlength="1000" placeholder="What was completed and reviewed?"></label>
+          <button id="job-checkpoint" type="button">Complete current step manually</button>
+          <button id="job-cancel" type="button">Cancel job</button>
+        </details>
         <details id="presentation-panel" class="stack">
           <summary>Views and presentation</summary>
           <label>Saved view<select id="view-list"></select></label>

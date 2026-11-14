@@ -50,8 +50,22 @@ class Library:
                     PRAGMA user_version = 1;
                     COMMIT;
                 """)
-            elif version != 1:
+            elif version not in (1,2):
                 raise RuntimeError(f"Unsupported Palladio database schema {version}.")
+            if version < 2:
+                connection.executescript("""
+                    BEGIN IMMEDIATE;
+                    CREATE TABLE IF NOT EXISTS design_jobs (
+                        id TEXT PRIMARY KEY,
+                        project_id TEXT NOT NULL REFERENCES properties(id),
+                        version INTEGER NOT NULL,
+                        updated TEXT NOT NULL,
+                        data TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS design_jobs_property ON design_jobs(project_id);
+                    PRAGMA user_version = 2;
+                    COMMIT;
+                """)
 
     @contextmanager
     def connect(self, *, write=False):

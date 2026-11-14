@@ -65,3 +65,15 @@ and restore them through normal revision history. Snapshots include the views. D
 PNG of the current viewport (including unsaved previews), or export saved placed geometry
 and optional terrain as OBJ in metres, Y up. OBJ omits finishes, source vegetation and water,
 and is capped at 100,000 triangles. Saved cameras do not currently control the Unreal camera.
+
+## 8 · Persistent design briefs and manual checkpoints
+
+Create jobs with a retained brief (up to 64,000 characters) and 1–32 explicit ordered steps.
+Start, pause, resume or cancel them; record each manual completion against the property
+revision reviewed, with a required note. Job versions prevent two sessions advancing the
+same step. Jobs survive restart and are separate from scene undo/restore. This package does
+not run a model or edit geometry automatically. Up to 40 jobs per property are retained.
+
+The database migrates from schema 1 to 2, preserving properties and revisions. Jobs live in
+the same SQLite database but are deliberately excluded from portable design snapshots and
+duplicated properties. Back up the database before upgrading; older builds reject schema 2.
