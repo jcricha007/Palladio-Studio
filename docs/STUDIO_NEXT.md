@@ -57,3 +57,11 @@ or its entire owning assembly. Overrides survive regeneration and portable expor
 a preset leaves applied copies intact. Wood, stone, tile and brick use matching per-face
 procedural colour sampling in both renderers. These are coarse triangle-colour patterns,
 not texture maps or physically based materials; mesh density controls their visible detail.
+
+## 7 · Saved views and presentation export
+
+Store up to 24 named orbit cameras per property, revisit them in the browser, or replace
+and restore them through normal revision history. Snapshots include the views. Download
+PNG of the current viewport (including unsaved previews), or export saved placed geometry
+and optional terrain as OBJ in metres, Y up. OBJ omits finishes, source vegetation and water,
+and is capped at 100,000 triangles. Saved cameras do not currently control the Unreal camera.
