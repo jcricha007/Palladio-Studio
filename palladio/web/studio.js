@@ -1,5 +1,6 @@
 import {AssetTools} from "./assets.js";
 import {ReferenceTools} from "./references.js";
+import {Extensions} from './extensions.js';
 import {Viewport} from "./viewport.js";
 import {DesignTools} from "./tools.js";
 import {SitePicker} from "./site-picker.js";
@@ -25,6 +26,9 @@ const sites = new SitePicker($, api, syncControls);
 const designTools = new DesignTools($, previewTool, discardOnEdit);
 const assetTools = new AssetTools($, {api,run,preview:previewTool,showPlan,state:()=>({project,selected}),invalidate:discardOnEdit});
 const referenceTools = new ReferenceTools($,{run,preview:previewTool,state:()=>({project}),invalidate:discardOnEdit});
+const extensions=new Extensions($,{api,run,preview:previewTool,showPlan,commit,select,
+  open:showProject,reloadLibrary:loadLibrary,invalidate:discardOnEdit,
+  state:()=>({project,selected,baselineView,catalog,viewport,busy})});
 
 function agentStatus(message, error = false) {
   $("agent-status").textContent = message;
@@ -176,6 +180,7 @@ function status(message, error = false) {
 }
 
 function syncControls() {
+  extensions.sync();
   designTools.sync(busy || !project || baselineView);
   assetTools.sync(busy || !project || baselineView,selected);
   referenceTools.sync(busy || !project || baselineView);
@@ -343,6 +348,7 @@ function displayTime(hour) {
 }
 
 function render() {
+  extensions.render();
   referenceTools.render(project);
   $("empty-state").hidden = Boolean(project);
   $("view").hidden = !project || !viewport;

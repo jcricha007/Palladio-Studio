@@ -127,6 +127,13 @@ class Library:
                 f"Duplicated {original['name']} at revision {original['revision']}",
             )
 
+    def import_snapshot(self, packet, name=None):
+        from .transfer import validate
+        original,baseline,scene=validate(packet)
+        name=required_text(name if name is not None else original,'Property name',100)
+        with self.connect(write=True) as connection:
+            return self._insert(connection,name,baseline,scene,'Imported property snapshot')
+
     def commit(self, project_id, expected_revision, commands=None, restore=None):
         if type(expected_revision) is not int or expected_revision < 1:
             raise ValidationError("A valid current revision is required.")

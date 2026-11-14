@@ -1,14 +1,14 @@
 # Palladio Studio build roadmap
 
-Updated 13 November 2026 after [PR #7](https://github.com/jcricha007/Palladio-Studio/pull/7)
-merged into `main` at `05e3515`. This roadmap distinguishes implemented capabilities,
+Updated 14 November 2026 after PRs #8–#12 merged into `main` at `adbcfd0`.
+The next ten-PR development series is tracked in [STUDIO_NEXT.md](STUDIO_NEXT.md). This roadmap distinguishes implemented capabilities,
 observed validation, and planned work. Milestone numbers describe product areas that can
 advance together. A merged increment does not close every acceptance item in its area.
 
 ## Four-PR stack above PR #8
 
-This branch contains implementation beyond `main`. Merge in dependency order; these entries
-are not claims that the work has already merged or passed native acceptance.
+This four-PR stack is now merged into `main`. Its local checks and remaining native
+acceptance requirements are preserved below.
 
 | Order | Branch / PR | Delivered in the stack |
 | --- | --- | --- |

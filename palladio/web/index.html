@@ -18,6 +18,11 @@
       <h2>Properties</h2>
       <div id="properties" class="stack"></div>
       <button id="duplicate" type="button" disabled>Duplicate property</button>
+      <details><summary>Transfer property</summary>
+        <p class="muted">Exports the saved design, original site, embedded assets and references. Import creates a new property; earlier history and unused library assets are not included.</p>
+        <button id="property-export" type="button">Export saved snapshot</button>
+        <label>Import snapshot<input id="property-import" type="file" accept=".json,application/json"></label>
+      </details>
       <hr>
       <h2>Scene</h2>
       <div id="scene-items" class="stack"></div>

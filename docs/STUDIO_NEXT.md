@@ -1,0 +1,18 @@
+# Studio development series after PR #12
+
+Base: `main` at `adbcfd0`. Each increment targets the preceding branch. Merge in order;
+retarget successors to main after their base merges. These are implementations awaiting
+review, not assertions of Windows or real-model acceptance. Commits skip hosted CI.
+
+## 1 · Portable property snapshots
+
+Export the current saved design and original site from **Transfer property**. The versioned,
+checksummed JSON embeds placed meshes and reference images. Import always creates an
+independent property with a fresh history; it never overwrites an existing property.
+The importer validates geometry, linked identities, generated parts, terrain layers and
+references before starting its transaction. Limit: 20 MB. Prior history, unused asset
+packets and local runtime configuration are not part of a snapshot.
+
+Acceptance: export a furnished property, import it into a second library, resize a linked
+assembly, compare original terrain and reopen offline. Windows/browser acceptance remains
+pending; regression evidence is recorded in each PR.

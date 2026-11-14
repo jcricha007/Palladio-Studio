@@ -360,3 +360,8 @@ placement, image normalization, a vision proposal, Apply and reopen. It could no
 development environment because Chromium's startup socket was blocked; it is not recorded
 as passing. Windows acceptance must also rebuild Unreal, verify mesh placement/collision,
 exercise history restore and test a real local vision model.
+
+[Next studio development series and acceptance notes](docs/STUDIO_NEXT.md)
+
+Use **Transfer property** in the library sidebar to export a saved snapshot or import one
+as a new property. Placed assets and reference images travel with the snapshot.

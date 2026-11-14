@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 import webbrowser
 
 from .assets import AssetStore
+from .transfer import snapshot, MAX_BYTES
 from .commands import preview_commands
 from .local_agent import AgentError, AgentService, OllamaPlanner
 from .assemblies import ASSEMBLIES, assembly_preview
@@ -26,11 +27,13 @@ STATIC = {
     "/mesh.js": ("mesh.js", "text/javascript"),
     "/assets.js": ("assets.js", "text/javascript"),
     "/references.js": ("references.js", "text/javascript"),
+    "/extensions.js": ("extensions.js", "text/javascript"),
+    "/transfer.js": ("transfer.js", "text/javascript"),
     "/tools.js": ("tools.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
 }
-PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
+PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(export|duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
 
 
 def handler_for(library, agent=None, sites=None):
@@ -87,21 +90,23 @@ def handler_for(library, agent=None, sites=None):
                 self.json_response(200, library.list())
                 return
             match = PROPERTY_ROUTE.fullmatch(path)
-            if match and match[2] in (None, "unreal"):
+            if match and match[2] in (None, "unreal", "export"):
                 try:
                     project = library.get(match[1])
-                    self.json_response(200, unreal_view(project) if match[2] == "unreal" else project)
+                    self.json_response(200, snapshot(project) if match[2]=='export' else unreal_view(project) if match[2] == "unreal" else project)
+                except ValidationError as error:
+                    self.json_response(400, {'error':str(error)})
                 except MissingProject as error:
                     self.json_response(404, {"error": str(error)})
                 return
             self.json_response(404, {"error": "Route not found."})
 
-        def read_json(self):
+        def read_json(self, limit=1_000_000):
             if self.headers.get_content_type() != "application/json":
                 raise ValidationError("Send a JSON request.")
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                if not 0 < size <= 1_000_000:
+                if not 0 < size <= limit:
                     raise ValidationError("Request size is invalid.")
                 payload = json.loads(self.rfile.read(size))
             except (json.JSONDecodeError, UnicodeError, ValueError, RecursionError) as error:
@@ -119,7 +124,10 @@ def handler_for(library, agent=None, sites=None):
                 return
             path = urlsplit(self.path).path
             try:
-                data = self.read_json()
+                data = self.read_json(MAX_BYTES+1000 if path=='/api/properties/import' else 1_000_000)
+                if path=='/api/properties/import':
+                    self.json_response(201,library.import_snapshot(data.get('packet'),data.get('name')))
+                    return
                 if path == '/api/assets/import':
                     item = assets.import_data(data.get('name'), data.get('format'), data.get('data'), data.get('units', 'm'))
                     self.json_response(201, {k:v for k,v in item.items() if k!='mesh'})
