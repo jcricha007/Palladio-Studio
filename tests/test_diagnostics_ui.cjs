@@ -1,0 +1,6 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const nodes=new Map(),find=id=>{if(!nodes.has(id))nodes.set(id,{events:{},addEventListener(n,f){this.events[n]=f;}});return nodes.get(id);};
+let busy=false,saved;const report={build:'abc123456789abcd',python:'3.12.0',database_schema:2,library_path:'C:/Studio/library.sqlite3'};
+const hooks={state:()=>({busy}),run:f=>f(),api:async()=>report};
+const ctx=vm.createContext({find,hooks,download:(name,data)=>saved={name,data}});vm.runInContext(fs.readFileSync('palladio/web/diagnostics.js','utf8').replace(/^import .*$/mg,'').replace('export class','class')+';const tools=new DiagnosticsTools(find,hooks);tools.sync();',ctx);
+(async()=>{assert.equal(find('diagnostics-download').disabled,true);await find('diagnostics-refresh').events.click();assert.match(find('diagnostics-result').textContent,/library.sqlite3/);find('diagnostics-download').events.click();assert.deepEqual(JSON.parse(saved.data),report);busy=true;vm.runInContext('tools.sync()',ctx);assert.equal(find('diagnostics-refresh').disabled,true);console.log('PASS: running build/library diagnostics and download controls');})().catch(e=>{console.error(e);process.exitCode=1;});

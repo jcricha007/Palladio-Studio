@@ -49,6 +49,7 @@ class DesignJobs:
     def change(self,project_id,job_id,data):
         with self.library.connect(write=True) as connection:
             job=self.read(connection,project_id,job_id);self.check_version(job,data.get('version'));action=data.get('action')
+            if not isinstance(action,str):raise ValidationError('Choose a supported job operation.')
             transitions={'start':('ready','active'),'pause':('active','paused'),'resume':('paused','active')}
             if action in transitions:
                 before,after=transitions[action]

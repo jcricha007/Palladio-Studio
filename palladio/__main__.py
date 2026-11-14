@@ -10,6 +10,7 @@ import webbrowser
 
 from .assets import AssetStore
 from .jobs import DesignJobs
+from .diagnostics import health
 from .finishes import PRESETS
 from .transfer import snapshot, MAX_BYTES
 from .commands import preview_commands
@@ -34,6 +35,7 @@ STATIC = {
     "/layout.js": ("layout.js", "text/javascript"),
     "/roofs.js": ("roofs.js", "text/javascript"),
     "/rooms.js": ("rooms.js", "text/javascript"),
+    "/diagnostics.js": ("diagnostics.js", "text/javascript"),
     "/jobs.js": ("jobs.js", "text/javascript"),
     "/presentation.js": ("presentation.js", "text/javascript"),
     "/finishes.js": ("finishes.js", "text/javascript"),
@@ -50,6 +52,7 @@ JOB_ROUTE=re.compile(r"/api/properties/([a-f0-9-]{36})/jobs(?:/([a-f0-9-]{36}))?
 
 def handler_for(library, agent=None, sites=None):
     jobs=DesignJobs(library)
+    runtime=health(library)
     agent = agent or AgentService()
     assets = AssetStore(library.path.parent / (library.path.stem + "-assets"))
     sites = sites or SiteService(library.path.parent / (library.path.stem + "-sites"))
@@ -85,6 +88,9 @@ def handler_for(library, agent=None, sites=None):
             if path in STATIC:
                 filename, content_type = STATIC[path]
                 self.respond(200, content_type, (WEB / filename).read_bytes())
+                return
+            if path == '/api/health':
+                self.json_response(200,runtime)
                 return
             if path == '/api/assets':
                 self.json_response(200, assets.list())

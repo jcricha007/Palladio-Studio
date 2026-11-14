@@ -49,7 +49,7 @@ def plant(scene,command,baseline):
     if not isinstance(data,dict) or not data.keys()<={'kind','name','width','depth','height','center','radius_m','count','seed','offset_m'}:
         raise ValidationError('Choose supported planting fields.')
     kind=data.get('kind')
-    if kind not in PLANTS:raise ValidationError('Choose pine, broadleaf or hedge.')
+    if not isinstance(kind,str) or kind not in PLANTS:raise ValidationError('Choose pine, broadleaf or hedge.')
     name=required_text(data.get('name',kind.capitalize()),'Planting name',50)
     count=data.get('count',1);seed=data.get('seed',1);center=data.get('center')
     if type(count) is not int or not 1<=count<=64 or len(scene.get('assemblies',[]))+count>500:raise ValidationError('Plant 1–64 objects within a 500-assembly property.')

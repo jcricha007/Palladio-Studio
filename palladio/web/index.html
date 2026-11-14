@@ -23,6 +23,11 @@
         <button id="property-export" type="button">Export saved snapshot</button>
         <label>Import snapshot<input id="property-import" type="file" accept=".json,application/json"></label>
       </details>
+      <details><summary>Studio diagnostics</summary>
+        <button id="diagnostics-refresh" type="button">Check running studio</button>
+        <pre id="diagnostics-result" class="job-details"></pre>
+        <button id="diagnostics-download" type="button" disabled>Download diagnostics</button>
+      </details>
       <hr>
       <h2>Scene</h2>
       <div id="scene-items" class="stack"></div>

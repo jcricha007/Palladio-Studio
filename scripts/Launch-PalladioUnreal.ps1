@@ -1,16 +1,22 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)]
     [string] $UnrealRoot,
 
-    [Parameter(Mandatory)]
-    [guid] $PropertyId,
+    [guid] $PropertyId = [guid]::Empty,
 
     [ValidateRange(1, 65535)]
     [int] $Port = 8765
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Palladio.Common.ps1')
+$UnrealRoot = Resolve-PalladioUnreal -UnrealRoot $UnrealRoot
+if ($PropertyId -eq [guid]::Empty) {
+    $Properties = @(Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/properties" -TimeoutSec 5)
+    if ($Properties.Count -eq 0) { throw 'Create and save a property in the browser first.' }
+    $PropertyId = [guid]$Properties[0].id
+    Write-Host "Opening $($Properties[0].name)"
+}
 $project = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../unreal/PalladioViewport.uproject')).Path
 $build = Join-Path $UnrealRoot 'Engine/Build/BatchFiles/Build.bat'
 $editor = Join-Path $UnrealRoot 'Engine/Binaries/Win64/UnrealEditor.exe'

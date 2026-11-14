@@ -4,6 +4,19 @@ Base: `main` at `adbcfd0`. Each increment targets the preceding branch. Merge in
 retarget successors to main after their base merges. These are implementations awaiting
 review, not assertions of Windows or real-model acceptance. Commits skip hosted CI.
 
+| Order | PR | Upgrade | Base |
+| --- | --- | --- | --- |
+| 1 | [#14](https://github.com/jcricha007/Palladio-Studio/pull/14) | Property transfer | main |
+| 2 | [#15](https://github.com/jcricha007/Palladio-Studio/pull/15) | Layout tools | #14 |
+| 3 | [#16](https://github.com/jcricha007/Palladio-Studio/pull/16) | Roof systems | #15 |
+| 4 | [#17](https://github.com/jcricha007/Palladio-Studio/pull/17) | Connected rooms | #16 |
+| 5 | [#18](https://github.com/jcricha007/Palladio-Studio/pull/18) | Planted landscape | #17 |
+| 6 | [#19](https://github.com/jcricha007/Palladio-Studio/pull/19) | Finish palettes | #18 |
+| 7 | [#20](https://github.com/jcricha007/Palladio-Studio/pull/20) | Saved views/export | #19 |
+| 8 | [#21](https://github.com/jcricha007/Palladio-Studio/pull/21) | Persistent jobs | #20 |
+| 9 | [#22](https://github.com/jcricha007/Palladio-Studio/pull/22) | Agent job review | #21 |
+| 10 | `palladio/windows-release` (this PR) | Launch, backup and acceptance | #22 |
+
 ## 1 · Portable property snapshots
 
 Export the current saved design and original site from **Transfer property**. The versioned,
@@ -93,3 +106,24 @@ storage supports 64,000). Each step accepts 8,000 characters and 12 validated sc
 Longer work must be split into explicit steps/jobs; this is not unlimited autonomous execution.
 Built-in commands support their existing small grammar; full instructions need a local model.
 Model quality, wall time and GPU usage still require workstation acceptance.
+
+## 10 · Windows launch, backup and acceptance
+
+`Start-PalladioStudio.ps1` runs from any terminal directory, selects Python 3.11+, preserves
+the checkout's library path, backs up before schema migration and refuses occupied ports.
+Optional `-WithUnreal` discovers UE 5.7, waits for this checkout/library's health response,
+then builds/opens the selected or most recently updated property. If Unreal fails, the
+browser server stays available. Ctrl+C stops only the Python server started by this script.
+The standalone Unreal launcher also discovers the engine and a saved property by default.
+
+The read-only health endpoint and browser diagnostics identify the running build/library.
+The diagnostics CLI provides consistent SQLite backups, including job records; it does not
+migrate while inspecting. Validation captures checkout identity, console output and JSON
+results, with opt-in native build and rendered browser checks. No packages are installed.
+The supplied browser workflow covers the new authoring tools, saved views, exports and jobs.
+
+At the series tip, 100 Python regressions and 14 Node suites pass locally, plus JavaScript
+syntax and diff checks. Python includes combined export/import/native projection, migration,
+backup and job transaction tests. Node uses DOM doubles/pure geometry. PowerShell execution,
+UE 5.7 compilation/collision/visuals, rendered-browser/PNG acceptance, and real Ollama quality,
+latency and GPU coexistence remain pending on the Windows workstation. Hosted CI is skipped.

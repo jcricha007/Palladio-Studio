@@ -150,6 +150,7 @@ def edit_scene(scene, command, baseline=None):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if not isinstance(action,str):raise ValidationError("Choose a supported scene action.")
     if action in ('view_save','view_update','view_remove'):
         from .presentation import edit_view
         return edit_view(scene,command)
