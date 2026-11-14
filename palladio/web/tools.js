@@ -11,6 +11,7 @@ export class DesignTools {
       const assembly = Object.fromEntries(['width','depth','height','yaw'].map(key => [key, Number(find('group-' + key).value)]));
       if (this.group.spec.kind === 'stairs') assembly.steps = Number(find('group-steps').value);
       if(this.group.spec.kind.endsWith('_roof'))assembly.overhang=Number(find('group-overhang').value);
+      if(this.group.spec.kind==='dwelling')for(const key of ['rooms_x','rooms_z','door_width','door_height'])assembly[key]=Number(find('group-'+key).value);
       assembly.position = ['x','y','z'].map(axis => Number(find('group-' + axis).value));
       if (['room','garage'].includes(this.group.spec.kind)) {
         for (const key of ['door_width','door_height','window_width','window_height','window_sill']) assembly[key] = Number(find('group-' + key).value);
@@ -62,8 +63,11 @@ export class DesignTools {
     this.find('group-steps').required=spec.kind==='stairs';
     this.find('group-overhang').value=spec.overhang??.3;
     this.find('group-overhang-label').hidden=!spec.kind.endsWith('_roof');
+    this.find('group-grid').hidden=spec.kind!=='dwelling';
+    for(const key of ['rooms_x','rooms_z'])this.find('group-'+key).value=spec[key]??2;
     const shell = ['room','garage'].includes(spec.kind);
-    this.find('group-openings').hidden = !shell;
+    this.find('group-openings').hidden = !shell&&spec.kind!=='dwelling';
+    for(const field of ['window_width','window_height','window_sill']){const label=this.find('group-'+field).parentElement;if(label)label.hidden=!shell;}
     for (const field of ['door_width','door_height','window_width','window_height','window_sill']) this.find('group-' + field).required = shell;
   }
 

@@ -32,3 +32,11 @@ rotation and overhang. Fit a new roof to a selected room/garage shell, or place 
 The shell's flat cap remains as a ceiling. The fitted roof is an independent linked assembly;
 include both in a layout set to move them together. These envelopes do not model framing,
 roof drainage, loads or attic interiors. Both renderers use the same generated mesh.
+
+## 4 · Connected room layouts
+
+The Connected rooms assembly creates a one-to-four by one-to-four rectangular room grid.
+Shared partitions have one doorway on every adjoining room edge; the entrance is aligned
+with the front-left room. Stable room/partition roles retain compatible overrides through
+resizing. Show room areas for clear dimensions excluding walls. Add a fitted roof separately.
+This is a schematic layout generator, not arbitrary floor-plan drafting or code compliance.

@@ -30,12 +30,14 @@ for _kind, _limits in {
 for _kind,_label in [('gable_roof','Gable roof'),('hip_roof','Hip roof'),('shed_roof','Shed roof')]:
     ASSEMBLIES[_kind]={'label':_label,'width':6,'depth':7,'height':1.8,'material':'charred timber',
         'limits':{'width':[2,40],'depth':[2,40],'height':[.2,8]}}
+ASSEMBLIES['dwelling']={'label':'Connected rooms','width':10,'depth':9,'height':3,'material':'plaster',
+    'limits':{'width':[6,40],'depth':[6,40],'height':[2.5,8]}}
 
 
 def generate_assembly(data):
     if not isinstance(data, dict) or not data.keys() <= {
         "kind", "name", "width", "depth", "height", "position", "yaw", "material",
-        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang"
+        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang", "rooms_x", "rooms_z"
     }:
         raise ValidationError("Choose supported assembly fields.")
     kind = data.get("kind")
@@ -54,6 +56,10 @@ def generate_assembly(data):
         "yaw": number(data.get("yaw", 0), "Assembly rotation", -360, 360),
         "material": data.get("material", defaults["material"]),
     }
+    if kind=='dwelling':
+        from .rooms import dwelling
+        return dwelling(spec,data)
+    if 'rooms_x' in data or 'rooms_z' in data: raise ValidationError('Room counts apply to connected-room dwellings.')
     if shell:
         spec.update({
             'door_width': number(data.get('door_width', 2.8 if kind == 'garage' else 1.2), 'Door width', .6, spec['width'] - .6),

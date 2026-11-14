@@ -31,11 +31,12 @@ STATIC = {
     "/transfer.js": ("transfer.js", "text/javascript"),
     "/layout.js": ("layout.js", "text/javascript"),
     "/roofs.js": ("roofs.js", "text/javascript"),
+    "/rooms.js": ("rooms.js", "text/javascript"),
     "/tools.js": ("tools.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
 }
-PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(measure|export|duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
+PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(schedule|measure|export|duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
 
 
 def handler_for(library, agent=None, sites=None):
@@ -92,9 +93,13 @@ def handler_for(library, agent=None, sites=None):
                 self.json_response(200, library.list())
                 return
             match = PROPERTY_ROUTE.fullmatch(path)
-            if match and match[2] in (None, "unreal", "export"):
+            if match and match[2] in (None, "unreal", "export", "schedule"):
                 try:
                     project = library.get(match[1])
+                    if match[2]=='schedule':
+                        from .rooms import room_schedule
+                        self.json_response(200,{'revision':project['revision'],'buildings':[{'id':g['id'],'name':g['spec']['name'],'rooms':room_schedule(g['spec'])} for g in project['scene'].get('assemblies',[]) if g['spec']['kind']=='dwelling']})
+                        return
                     self.json_response(200, snapshot(project) if match[2]=='export' else unreal_view(project) if match[2] == "unreal" else project)
                 except ValidationError as error:
                     self.json_response(400, {'error':str(error)})

@@ -130,6 +130,7 @@
             <label>Rotation (degrees)<input id="group-yaw" type="number" step="any" required></label>
             <label id="group-steps-label" hidden>Step count<input id="group-steps" type="number" min="2" max="32" step="1"></label>
             <label id="group-overhang-label" hidden>Roof overhang (m)<input id="group-overhang" type="number" min="0" max="3" step="any" value="0.3"></label>
+            <div id="group-grid" hidden class="triplet"><label>Room columns<input id="group-rooms_x" type="number" min="1" max="4" step="1" value="2"></label><label>Rows<input id="group-rooms_z" type="number" min="1" max="4" step="1" value="2"></label></div>
             <div id="group-openings" class="stack">
               <label>Door width<input id="group-door_width" type="number" step="any"></label>
               <label>Door height<input id="group-door_height" type="number" step="any"></label>
@@ -234,7 +235,9 @@
           </fieldset>
           <label>Rotation in degrees<input id="assembly-yaw" type="number" step="any" value="0" min="-360" max="360" required></label>
           <label id="assembly-overhang-label" hidden>Roof overhang (m)<input id="assembly-overhang" type="number" min="0" max="3" step="any" value="0.3"></label>
+          <div id="assembly-grid" hidden class="triplet"><label>Room columns<input id="assembly-rooms_x" type="number" min="1" max="4" step="1" value="2"></label><label>Rows<input id="assembly-rooms_z" type="number" min="1" max="4" step="1" value="2"></label></div>
           <button id="roof-fit" type="button">Preview roof fitted to selected shell</button>
+          <button id="room-schedule" type="button">Show room areas</button><pre id="room-schedule-text"></pre>
           <label>Primary material<select id="assembly-material"></select></label>
           <button type="submit">Preview assembly</button>
           <p class="muted">Shell height is clear interior height; Y is the floor bottom. Placement does not follow terrain automatically. Preview does not save. Use Apply below the scene to commit one revision. Pieces remain individually editable; these are design studies, not construction documents.</p>

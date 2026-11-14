@@ -587,6 +587,7 @@ $("assembly-form").addEventListener("submit", event => {
       yaw: $("assembly-yaw").valueAsNumber,
     };
     if(assembly.kind.endsWith('_roof'))assembly.overhang=Number($('assembly-overhang').value);
+    if(assembly.kind==='dwelling')for(const key of ['rooms_x','rooms_z'])assembly[key]=Number($('assembly-'+key).value);
     const plan = await api(propertiesPath + "/" + project.id + "/assembly-preview", {assembly});
     if (plan.revision !== project.revision) throw new Error("This property changed. Reopen it and preview again.");
     showPlan(plan);
