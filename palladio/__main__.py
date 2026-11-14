@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 import webbrowser
 
 from .assets import AssetStore
+from .finishes import PRESETS
 from .transfer import snapshot, MAX_BYTES
 from .commands import preview_commands
 from .local_agent import AgentError, AgentService, OllamaPlanner
@@ -32,6 +33,7 @@ STATIC = {
     "/layout.js": ("layout.js", "text/javascript"),
     "/roofs.js": ("roofs.js", "text/javascript"),
     "/rooms.js": ("rooms.js", "text/javascript"),
+    "/finishes.js": ("finishes.js", "text/javascript"),
     "/planting.js": ("planting.js", "text/javascript"),
     "/tools.js": ("tools.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
@@ -88,7 +90,7 @@ def handler_for(library, agent=None, sites=None):
                 self.json_response(200, agent.describe())
                 return
             if path == "/api/catalog":
-                self.json_response(200, {"elements": ELEMENTS, "materials": MATERIALS, "weather": WEATHER, "assemblies": ASSEMBLIES})
+                self.json_response(200, {"elements": ELEMENTS, "materials": MATERIALS, "weather": WEATHER, "assemblies": ASSEMBLIES, "finishes": PRESETS})
                 return
             if path == "/api/properties":
                 self.json_response(200, library.list())

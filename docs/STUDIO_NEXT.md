@@ -49,3 +49,11 @@ terrain, including later layer changes and original-ground restoration. Moves/co
 explicit offsets; detach converts plants to independent pieces. Source/procedural vegetation
 is unchanged. Shapes are schematic and planting overlaps are left visible for review.
 Trees added through the generic assembly catalog remain unanchored until placed manually.
+
+## 6 · Finish palettes and surface patterns
+
+Save selected finishes as named property presets and preview applying a preset to a part
+or its entire owning assembly. Overrides survive regeneration and portable export. Removing
+a preset leaves applied copies intact. Wood, stone, tile and brick use matching per-face
+procedural colour sampling in both renderers. These are coarse triangle-colour patterns,
+not texture maps or physically based materials; mesh density controls their visible detail.

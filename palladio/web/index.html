@@ -208,13 +208,23 @@
           </div>
           <p id="asset-status" role="status" class="muted"></p>
         </details>
+        <details id="palette-panel" class="stack">
+          <summary>Finish palettes</summary>
+          <label>Preset<select id="palette-list"></select></label>
+          <label>Apply to<select id="palette-scope"><option value="part">Selected part</option><option value="assembly">Whole assembly</option></select></label>
+          <button id="palette-apply" type="button">Preview preset</button>
+          <label>New preset name<input id="palette-name" maxlength="80" value="My finish"></label>
+          <button id="palette-save" type="button">Preview saving selected finish</button>
+          <button id="palette-remove" type="button">Preview removing preset</button>
+        </details>
         <section id="finish-panel" hidden>
           <h2>Selected finish</h2>
           <form id="finish-form" class="stack">
             <label>Colour<input id="finish-color" type="color" value="#b78554"></label>
-            <label>Pattern<select id="finish-pattern"><option value="solid">Solid</option><option value="wood">Wood grain</option></select></label>
-            <label>Grain spacing (m)<input id="finish-scale" type="number" value="0.25" min="0.02" max="10" step="any" required></label>
-            <label>Grain direction<input id="finish-rotation" type="number" value="0" min="-360" max="360" step="any" required></label>
+            <label>Grout colour<input id="finish-accent" type="color" value="#c8c1b7"></label>
+            <label>Pattern<select id="finish-pattern"><option value="solid">Solid</option><option value="wood">Wood grain</option><option value="stone">Stone</option><option value="tile">Tile</option><option value="brick">Brick</option></select></label>
+            <label>Pattern scale (m)<input id="finish-scale" type="number" value="0.25" min="0.02" max="10" step="any" required></label>
+            <label>Pattern direction<input id="finish-rotation" type="number" value="0" min="-360" max="360" step="any" required></label>
             <label class="checkbox"><input id="finish-source" type="checkbox">Use imported triangle colours</label>
             <button type="submit">Preview finish</button>
             <button id="finish-reset" type="button">Preview original finish</button>

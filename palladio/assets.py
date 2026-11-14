@@ -82,11 +82,14 @@ class AssetStore:
         if target is None: raise ValidationError('Select a scene element to capture.')
         group=owner(project['scene'],selection)
         parts=[e for e in project['scene']['elements'] if not group and e['id']==selection or group and e['id'] in group['members'].values()]
-        vertices=[];triangles=[];colors=[]
+        vertices=[];triangles=[];colors=[];indices={}
         for part in parts:
             for points,tint in surface_triangles(part):
-                triangles.extend(range(len(vertices),len(vertices)+3))
-                vertices.extend(world_point(part,p) for p in points);colors.append(tint)
+                for p in points:
+                    point=world_point(part,p);key=tuple(point)
+                    if key not in indices:indices[key]=len(vertices);vertices.append(point)
+                    triangles.append(indices[key])
+                colors.append(tint)
                 if len(triangles)>MAX_TRIANGLES*3 or len(vertices)>MAX_VERTICES: raise ValidationError('This selection is too detailed to capture as one asset.')
         size,model=normalize(vertices,triangles,colors)
         return self.save(name,size,model,'Captured from '+project['name']+' revision '+str(project['revision']))

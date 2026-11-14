@@ -150,6 +150,9 @@ def edit_scene(scene, command, baseline=None):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if action in ('finish_save','finish_apply','finish_remove'):
+        from .finishes import edit_finish
+        return edit_finish(scene,command,baseline)
     if action=='planting':
         from .planting import plant
         return plant(scene,command,baseline)

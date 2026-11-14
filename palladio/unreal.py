@@ -35,7 +35,7 @@ def unreal_view(project):
         center = unreal_vector(element["position"])
         center[2] += dimensions[2] / 2
         sections = {}
-        if 'mesh' in element or element.get('finish', {}).get('pattern') == 'wood':
+        if 'mesh' in element or element.get('finish', {}).get('pattern', 'solid') != 'solid':
             for points, tint in surface_triangles(element):
                 section = sections.setdefault(tint, {'color':tint,'vertices_cm':[],'triangles':[]})
                 start = len(section['vertices_cm'])

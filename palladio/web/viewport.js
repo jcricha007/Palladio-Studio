@@ -272,7 +272,7 @@ export class Viewport {
     for (const item of this.items) {
       const chosen = item.id === selected;
       const color = tint(item.finish?.color || materials[item.material]);
-      if (item.mesh || item.finish?.pattern === 'wood') {
+      if (item.mesh || item.finish && item.finish.pattern !== 'solid') {
         for (const surface of surfaceTriangles(item, materials[item.material])) {
           const points=surface.points.map(p=>add(item.position,rotate(p,item.yaw*Math.PI/180)));
           triangle(vertices,...points,chosen?add(scale(surface.color,.72),[.28,.25,.15]):surface.color);

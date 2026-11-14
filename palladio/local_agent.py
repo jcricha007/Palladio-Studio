@@ -12,6 +12,7 @@ from .assemblies import ASSEMBLIES
 from .commands import placement_warnings
 from .placement import active_terrain, height_at
 from .references import selected_references
+from .geometry import PATTERNS
 from .scene import ELEMENTS, MATERIALS, WEATHER, ValidationError, edit_scene, required_text
 from .store import RevisionConflict
 
@@ -42,7 +43,7 @@ def object_schema(properties, required=None):
 TEXT = {"type": "string"}
 VECTOR = {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3}
 FINISH_FIELDS = {"color": {"type":"string","pattern":"^#[0-9a-fA-F]{6}$"},
-    "pattern":{"enum":["solid","wood"]},"scale_m":{"type":"number","minimum":.02,"maximum":10},
+    "pattern":{"enum":list(PATTERNS)},"accent_color":{"type":"string","pattern":"^#[0-9a-fA-F]{6}$"},"scale_m":{"type":"number","minimum":.02,"maximum":10},
     "rotation":{"type":"number"},"source_colors":{"type":"boolean"}}
 ELEMENT_FIELDS = {
     "kind": {"type": "string", "enum": list(ELEMENTS)},

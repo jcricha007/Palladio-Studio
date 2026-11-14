@@ -5,6 +5,7 @@ from .scene import ValidationError, number, vector, MATERIALS
 MAX_TRIANGLES=4096
 MAX_VERTICES=8192
 COLOR=re.compile(r'#[0-9a-fA-F]{6}')
+PATTERNS=('solid','wood','stone','tile','brick')
 
 
 def color(value):
@@ -13,15 +14,16 @@ def color(value):
 
 
 def finish(data):
-    if not isinstance(data,dict) or not data.keys() <= {'color','pattern','scale_m','rotation','source_colors'}:
+    if not isinstance(data,dict) or not data.keys() <= {'color','pattern','scale_m','rotation','source_colors','accent_color'}:
         raise ValidationError('Choose supported finish fields.')
     pattern=data.get('pattern','solid')
-    if pattern not in ('solid','wood'): raise ValidationError('Choose a solid or wood finish.')
+    if pattern not in PATTERNS: raise ValidationError('Choose a supported surface pattern.')
     source=data.get('source_colors',False)
     if type(source) is not bool: raise ValidationError('Source colours must be true or false.')
     return {'color':color(data.get('color','#b78554')),'pattern':pattern,
             'scale_m':number(data.get('scale_m',.25),'Grain spacing (m)',.02,10),
-            'rotation':number(data.get('rotation',0),'Grain direction',-360,360),'source_colors':source}
+            'rotation':number(data.get('rotation',0),'Pattern direction',-360,360),'source_colors':source,
+            **({'accent_color':color(data['accent_color'])} if 'accent_color' in data else {})}
 
 
 def mesh(data):
@@ -70,7 +72,7 @@ def raw_triangles(item):
         return
     corners=[[-w/2,0,-d/2],[w/2,0,-d/2],[w/2,0,d/2],[-w/2,0,d/2],
              [-w/2,h,-d/2],[w/2,h,-d/2],[w/2,h,d/2],[-w/2,h,d/2]]
-    n=8 if appearance.get('pattern')=='wood' else 1
+    n=8 if appearance.get('pattern')=='wood' else 16 if appearance.get('pattern','solid')!='solid' else 1
     for a,b,c,d1 in [(0,1,2,3),(4,7,6,5),(0,4,5,1),(1,5,6,2),(2,6,7,3),(3,7,4,0)]:
         a,b,d1=corners[a],corners[b],corners[d1]
         def at(u,v): return [a[i]+(b[i]-a[i])*u+(d1[i]-a[i])*v for i in range(3)]
@@ -86,12 +88,25 @@ def surface_triangles(item):
     base=appearance.get('color',MATERIALS[item['material']])
     for points,source in raw_triangles(item):
         shade=1
-        if appearance.get('pattern')=='wood':
-            centre=[sum(p[i] for p in points)/3 for i in range(3)]
-            angle=math.radians(appearance.get('rotation',0))
-            phase=(centre[0]*math.cos(angle)+centre[2]*math.sin(angle)+.02*math.sin(centre[1]*7))/appearance.get('scale_m',.25)
-            shade=.72+.28*round((math.sin(phase*2*math.pi)*.5+.5)*7)/7
         chosen=source if source and appearance.get('source_colors',not appearance) else base
+        pattern=appearance.get('pattern','solid')
+        if pattern!='solid':
+            centre=[sum(p[i] for p in points)/3 for i in range(3)]
+            a,b,c=points;u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)]
+            normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]]
+            axis=max(range(3),key=lambda i:abs(normal[i]));u,v=(centre[2],centre[1]) if axis==0 else (centre[0],centre[2]) if axis==1 else (centre[0],centre[1])
+            angle=math.radians(appearance.get('rotation',0))
+            u,v=u*math.cos(angle)-v*math.sin(angle),u*math.sin(angle)+v*math.cos(angle)
+            scale=appearance.get('scale_m',.25)
+            if pattern=='wood':
+                phase=(u+.02*math.sin(v*7))/scale;shade=.72+.28*math.floor((math.sin(phase*2*math.pi)*.5+.5)*7+.5)/7
+            elif pattern=='stone':shade=.65+.35*((math.floor(u/scale)*73856093 ^ math.floor(v/scale)*19349663)&7)/7
+            else:
+                row=math.floor(v/scale*(2 if pattern=='brick' else 1));x=u/scale+(row%2)*.5 if pattern=='brick' else u/scale
+                y=v/scale*(2 if pattern=='brick' else 1)
+                grout=min(x-math.floor(x),1-(x-math.floor(x)),y-math.floor(y),1-(y-math.floor(y)))<.07
+                if grout:chosen=appearance.get('accent_color','#c8c1b7')
+                elif pattern=='brick':shade=.88+.12*((math.floor(x)^row)&3)/3
         rgb=[int(chosen[i:i+2],16) for i in (1,3,5)]
         tint='#'+''.join(f'{min(255,max(0,math.floor(c*shade+.5))):02x}' for c in rgb)
         yield points,tint

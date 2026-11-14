@@ -71,7 +71,13 @@ def validate(packet):
             height_at(terrain,tree['position'][0],tree['position'][2])
         for environment in (baseline['environment'],scene['environment']):
             edit_scene({'environment':{'weather':'clear','hour':16}}, {'action':'environment','environment':environment})
-        if not scene.keys() <= {'elements','environment','assemblies','terrain','terrain_layers','references'}: raise ValueError()
+        if not scene.keys() <= {'elements','environment','assemblies','terrain','terrain_layers','references','finishes'}: raise ValueError()
+        finish_ids=set();finish_names=set()
+        for preset in sequence(scene.get('finishes',[]),32,'Finishes'):
+            from .geometry import finish
+            key=identifier(preset['id']);label=required_text(preset['name'],'Finish name',80)
+            if key in finish_ids or label.casefold() in finish_names or set(preset)!={'id','name','finish'} or finish(preset['finish'])!=preset['finish']:raise ValueError()
+            finish_ids.add(key);finish_names.add(label.casefold())
         ids=set();elements=[]
         for item in sequence(scene['elements'],5000,'Elements'):
             key=identifier(item['id'])

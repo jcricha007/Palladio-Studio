@@ -70,7 +70,8 @@ class AssetTests(unittest.TestCase):
         asset=self.assets.capture(self.p,item['id'],'Custom terrace')
         self.assertEqual(self.library.get(self.p['id']),before)
         expected=[world_point(e,p) for e in self.p['scene']['elements'] for tri,_ in surface_triangles(e) for p in tri]
-        actual=asset['mesh']['vertices'];self.assertEqual(len(actual),len(expected))
+        actual=[asset['mesh']['vertices'][i] for i in asset['mesh']['triangles']];self.assertEqual(len(actual),len(expected))
+        self.assertLess(len(asset['mesh']['vertices']),len(actual))
         low=[min(p[i] for p in expected) for i in range(3)];high=[max(p[i] for p in expected) for i in range(3)]
         origin=[(low[0]+high[0])/2,low[1],(low[2]+high[2])/2]
         for original,normalized in zip(expected,actual):
