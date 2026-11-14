@@ -27,11 +27,15 @@ for _kind, _limits in {
     'planter': {'width':[1,8], 'depth':[1,8], 'height':[.3,2]},
 }.items(): ASSEMBLIES[_kind]['limits'] = _limits
 
+for _kind,_label in [('gable_roof','Gable roof'),('hip_roof','Hip roof'),('shed_roof','Shed roof')]:
+    ASSEMBLIES[_kind]={'label':_label,'width':6,'depth':7,'height':1.8,'material':'charred timber',
+        'limits':{'width':[2,40],'depth':[2,40],'height':[.2,8]}}
+
 
 def generate_assembly(data):
     if not isinstance(data, dict) or not data.keys() <= {
         "kind", "name", "width", "depth", "height", "position", "yaw", "material",
-        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps"
+        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang"
     }:
         raise ValidationError("Choose supported assembly fields.")
     kind = data.get("kind")
@@ -74,6 +78,11 @@ def generate_assembly(data):
     # Validate material even before producing any geometry.
     element({"kind": "block", "name": "check", "size": [1, 1, 1],
              "position": [0, 0, 0], "material": spec["material"]})
+    from .roofs import ROOF_KINDS,roof_part
+    if kind in ROOF_KINDS:
+        spec['overhang']=number(data.get('overhang',.3),'Roof overhang',0,3)
+        return spec,[roof_part(spec)]
+    if 'overhang' in data: raise ValidationError('Overhang applies to roof assemblies.')
     pieces = []
     roles = {}
     angle = math.radians(spec["yaw"])

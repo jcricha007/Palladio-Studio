@@ -24,3 +24,11 @@ Preview moving, copying, rotating about the first object's origin, aligning or d
 origins, or snapping them to a metre grid. Measurement reports world-axis bounds of actual
 mesh/box geometry and, for two objects, origin distance. All edits remain atomic and
 revisioned. These are positioning aids; alignment does not create joints or solve collisions.
+
+## 3 · Parametric roof envelopes
+
+Gable, hip and shed roofs are closed triangle assemblies with editable rise, dimensions,
+rotation and overhang. Fit a new roof to a selected room/garage shell, or place it manually.
+The shell's flat cap remains as a ceiling. The fitted roof is an independent linked assembly;
+include both in a layout set to move them together. These envelopes do not model framing,
+roof drainage, loads or attic interiors. Both renderers use the same generated mesh.

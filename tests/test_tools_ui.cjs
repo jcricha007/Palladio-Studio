@@ -19,4 +19,8 @@ context.project.revision=3;context.project.scene.terrain_layers=[{id:'layer',nam
 vm.runInContext('tools.render(project,null)',context);
 find('terrain-toggle').events.click();assert.equal(commands[0].enabled,false);assert.equal(commands[0].id,'layer');
 find('terrain-restore').events.click();assert.equal(commands[0].action,'terrain_restore');
-console.log('PASS: assembly parameter preview, placement, invalidation and deselection');
+context.project.scene.assemblies[0].spec.kind='gable_roof';context.project.revision=4;
+vm.runInContext('tools.render(project,"e")',context);
+find('group-overhang').value='.6';find('group-form').events.submit({preventDefault(){}});
+assert.equal(commands[0].assembly.overhang,.6);assert.equal(find('group-overhang-label').hidden,false);
+console.log('PASS: assembly/roof parameters, placement, invalidation and deselection');

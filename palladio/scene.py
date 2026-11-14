@@ -149,6 +149,9 @@ def edit_scene(scene, command, baseline=None):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if action=='roof_fit':
+        from .roofs import fit_roof
+        return fit_roof(scene,command,baseline)
     if action=='layout':
         from .layout import edit_layout
         return edit_layout(scene,command,baseline)

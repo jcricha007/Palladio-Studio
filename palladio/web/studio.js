@@ -180,7 +180,6 @@ function status(message, error = false) {
 }
 
 function syncControls() {
-  extensions.sync();
   designTools.sync(busy || !project || baselineView);
   assetTools.sync(busy || !project || baselineView,selected);
   referenceTools.sync(busy || !project || baselineView);
@@ -207,6 +206,7 @@ function syncControls() {
   $("cancel-request").disabled = !agentRequest;
   $("apply-plan").disabled = busy || !project || baselineView || !pending ||
     !(pending.commands || [pending.command]).filter(Boolean).length;
+  extensions.sync();
 }
 
 async function run(operation, onError = error => status(error.message, true)) {
@@ -586,6 +586,7 @@ $("assembly-form").addEventListener("submit", event => {
       position: ["x", "y", "z"].map(axis => $("assembly-" + axis).valueAsNumber),
       yaw: $("assembly-yaw").valueAsNumber,
     };
+    if(assembly.kind.endsWith('_roof'))assembly.overhang=Number($('assembly-overhang').value);
     const plan = await api(propertiesPath + "/" + project.id + "/assembly-preview", {assembly});
     if (plan.revision !== project.revision) throw new Error("This property changed. Reopen it and preview again.");
     showPlan(plan);
