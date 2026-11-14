@@ -58,6 +58,8 @@ ASSEMBLY_FIELDS = {
     "material": ELEMENT_FIELDS["material"], "position": VECTOR, "yaw": {"type": "number"},
     **{key: {"type": "number"} for key in ("width", "height", "depth", "door_width", "door_height", "window_width", "window_height", "window_sill")},
     "steps":{"type":"integer","minimum":2,"maximum":32},
+    "overhang":{"type":"number","minimum":0,"maximum":3},
+    "rooms_x":{"type":"integer","minimum":1,"maximum":4},"rooms_z":{"type":"integer","minimum":1,"maximum":4},
 }
 LAYER_FIELDS = {"name":TEXT,"mode":{"enum":["raise","lower","flatten"]},
     "center":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
@@ -86,6 +88,14 @@ PLAN_SCHEMA = object_schema({
         }, [])}),
     ]}},
 })
+JOB_SCHEMA=object_schema({"title":{"type":"string","maxLength":100},"steps":{"type":"array","minItems":1,"maxItems":32,"items":{"type":"string","minLength":1,"maxLength":8000}}})
+JOB_SYSTEM="""Decompose the user's architectural brief into ordered, self-contained design steps.
+Return only title and steps matching the supplied schema. Each step will be previewed separately
+against the current property and explicitly applied by the user. Include enough dimensions and
+scope in each step. Use supported schematic catalog geometry, environment and finishes. Do not
+claim construction compliance, fetch files, execute code or promise unsupported rendering.
+Do not invent scene IDs; future steps must refer to objects by their design names.
+Keep the user's intent and identify unsupported details as manual review steps."""
 SYSTEM = """You are Palladio's local design planner. Return only JSON matching the supplied schema.
 You propose edits; you cannot execute code, fetch assets, save, or apply anything.
 The user must review and Apply. Never claim edits are saved. For questions, ambiguous targets,
@@ -197,6 +207,12 @@ class OllamaPlanner:
         return sorted(models.values(), key=lambda item: item["name"].casefold())
 
     def propose(self, context, prompt, model, images=None):
+        return self._generate(context,prompt,model,images,PLAN_SCHEMA,SYSTEM)
+
+    def outline(self,brief,model):
+        return self._generate({'catalog':ASSEMBLIES},brief,model,None,JOB_SCHEMA,JOB_SYSTEM)
+
+    def _generate(self,context,prompt,model,images,schema,system):
         model = model_name(model)
         if model not in {entry["name"] for entry in self.models()}:
             raise ValidationError("The selected local model is no longer installed. Refresh models and choose again.")
@@ -213,10 +229,10 @@ class OllamaPlanner:
         payload = {
             "model": model,
             "messages": [
-                {"role": "system", "content": SYSTEM + "\nResponse schema:\n" + json.dumps(PLAN_SCHEMA)},
+                {"role": "system", "content": system + "\nResponse schema:\n" + json.dumps(schema)},
                 {"role": "user", "content": json.dumps({"scene_context": context, "request": prompt}, ensure_ascii=False)},
             ],
-            "format": PLAN_SCHEMA, "stream": False,
+            "format": schema, "stream": False,
             "options": {"temperature": 0, "num_ctx": 16384, "num_predict": 2048},
             # Release this model after each turn rather than leaving two models
             # resident after a selection change while Unreal needs GPU memory.
@@ -361,7 +377,18 @@ class AgentService:
     def models(self):
         return {"provider": "ollama", "models": self.ollama.models(), "endpoint": self.ollama.endpoint}
 
-    def preview(self, project, prompt, selection=None, *, provider="rules", model=None, revision=None, references=None, query=''):
+    def outline(self,brief,model):
+        from .jobs import outline
+        brief=required_text(brief,'Brief for automatic outline',16000)
+        if not self._inference_lock.acquire(blocking=False):raise AgentError('A local model request is still running. Retry when it finishes.',409)
+        try:
+            output=self.ollama.outline(brief,model)
+            if not isinstance(output,dict) or set(output)!={'title','steps'}:raise AgentError('The model returned an invalid outline. Nothing was saved.',422)
+            result=outline({**output,'brief':brief})
+            return {'title':result['title'],'steps':[s['instruction'] for s in result['steps']]}
+        finally:self._inference_lock.release()
+
+    def preview(self, project, prompt, selection=None, *, provider="rules", model=None, revision=None, references=None, query='', job_context=None):
         prompt = required_text(prompt, "Request", 8000)
         if provider not in ("rules", "ollama"):
             raise ValidationError("Choose Built-in commands or Local Ollama.")
@@ -378,6 +405,7 @@ class AgentService:
         if revision is None:
             raise ValidationError("Local model requests require the current revision.")
         context = scene_context(project, selection, query)
+        if job_context is not None:context['design_job']=deepcopy(job_context)
         context['references'] = [{k:r[k] for k in ('id','name','cues','width','height')} for r in chosen]
         if not self._inference_lock.acquire(blocking=False):
             raise AgentError("A local model request is still running. Its result will not apply automatically; wait briefly and retry.", 409)

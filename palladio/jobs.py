@@ -70,3 +70,53 @@ class DesignJobs:
                 if current_step(job) is None:job['status']='completed'
             else:raise ValidationError('Choose a supported job operation.')
             return self.save(connection,job)
+
+    def propose(self,project_id,job_id,data,agent):
+        job=self.get(project_id,job_id);self.check_version(job,data.get('version'))
+        if job['status']!='active':raise ValidationError('Start or resume this job before previewing a step.')
+        project=self.library.get(project_id)
+        if type(data.get('revision')) is not int or data['revision']!=project['revision']:raise RevisionConflict('Reload the property before planning this step.')
+        step=current_step(job);provider=data.get('provider','rules');context=None
+        if provider=='ollama':
+            required_text(job['brief'],'Brief for local planning',16000)
+            index=job['steps'].index(step)
+            context={'title':job['title'],'brief':job['brief'],'current_step':index+1,'total_steps':len(job['steps']),
+                     'nearby_steps':[{'number':i+1,'instruction':s['instruction'][:500],'status':s['status']} for i,s in enumerate(job['steps']) if index-4<=i<=index+2],
+                     'nearby_instructions_may_be_truncated':True}
+        plan=agent.preview(project,step['instruction'],data.get('selection'),provider=provider,model=data.get('model'),
+                           revision=project['revision'],references=data.get('references'),query=data.get('query',''),job_context=context)
+        # Inference runs outside the write lock. A paused/cancelled/changed job invalidates a late response.
+        with self.library.connect(write=True) as connection:
+            latest=self.read(connection,project_id,job_id);self.check_version(latest,job['version'])
+            if self.library._read(connection,project_id)['revision']!=project['revision']:raise RevisionConflict('The property changed while this step was planned. Preview again.')
+            if plan['commands']:
+                latest['proposal']={k:v for k,v in plan.items() if k not in ('scene','command','elements')}
+                latest=self.save(connection,latest)
+            elif latest.pop('proposal',None) is not None:latest=self.save(connection,latest)
+            return {'job':latest,'plan':{**plan,'job':{'id':latest['id'],'version':latest['version']}}}
+
+    def review(self,project_id,job_id,data):
+        from .commands import preview_commands
+        with self.library.connect() as connection:
+            job=self.read(connection,project_id,job_id);self.check_version(job,data.get('version'))
+            proposal=job.get('proposal')
+            if job['status']!='active' or not proposal:raise ValidationError('Preview the current step first.')
+            project=self.library._read(connection,project_id)
+            if type(data.get('revision')) is not int or data['revision']!=project['revision']:raise RevisionConflict('Reload before reviewing a saved proposal.')
+            plan=preview_commands(project,proposal['revision'],proposal['commands'])
+            return {'job':job,'plan':{**proposal,'scene':plan['scene'],'changes':plan['changes'],'warnings':plan['warnings'],'job':{'id':job_id,'version':job['version']}}}
+
+    def apply(self,project_id,job_id,data):
+        with self.library.connect(write=True) as connection:
+            job=self.read(connection,project_id,job_id);self.check_version(job,data.get('version'));proposal=job.get('proposal')
+            if job['status']!='active' or not proposal:raise ValidationError('Review a current job proposal before applying it.')
+            if type(data.get('revision')) is not int or data['revision']!=proposal['revision']:raise RevisionConflict('This preview belongs to an earlier property revision.')
+            project=self.library._commit(connection,project_id,proposal['revision'],proposal['commands'])
+            current_step(job).update(status='complete',revision=project['revision'],note=proposal['summary'],method='agent',completed=timestamp())
+            job.pop('proposal');job['status']='active' if current_step(job) else 'completed'
+            return {'project':project,'job':self.save(connection,job)}
+
+    def discard(self,project_id,job_id,data):
+        with self.library.connect(write=True) as connection:
+            job=self.read(connection,project_id,job_id);self.check_version(job,data.get('version'))
+            job.pop('proposal',None);return self.save(connection,job)

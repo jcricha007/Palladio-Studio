@@ -215,11 +215,15 @@
             <label>Title<input id="job-title" maxlength="100" required></label>
             <label>Design brief<textarea id="job-brief" maxlength="64000" rows="4" required></textarea></label>
             <label>Ordered steps · one per line<textarea id="job-steps" rows="5" required></textarea></label>
+            <button id="job-outline" type="button">Suggest steps with selected local model</button>
             <button type="submit">Save design job</button>
           </form>
           <label>Saved jobs<select id="job-list"></select></label>
           <button id="job-refresh" type="button">Refresh jobs</button>
           <pre id="job-details" class="job-details"></pre>
+          <p id="job-agent-status" class="muted" role="status">Uses the provider/model and context filter selected in the agent panel, plus any selected reference image. Each step requires review and Apply. No steps run unattended.</p>
+          <button id="job-propose" type="button">Preview current step with agent</button>
+          <button id="job-review" type="button">Review saved step proposal</button>
           <button id="job-start" type="button">Start job</button>
           <button id="job-pause" type="button">Pause job</button>
           <button id="job-resume" type="button">Resume job</button>

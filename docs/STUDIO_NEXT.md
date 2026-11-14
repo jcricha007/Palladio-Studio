@@ -77,3 +77,19 @@ not run a model or edit geometry automatically. Up to 40 jobs per property are r
 The database migrates from schema 1 to 2, preserving properties and revisions. Jobs live in
 the same SQLite database but are deliberately excluded from portable design snapshots and
 duplicated properties. Back up the database before upgrading; older builds reject schema 2.
+
+## 9 · Agent job outlines and reviewed execution
+
+Ask the selected installed local model to suggest an editable ordered outline, then save
+it as a job. Preview one current step using the selected provider/model, object, context
+filter and optional reference. The local planner sees the retained brief and nearby progress;
+its scene context remains bounded. Review the proposed geometry and explicitly Apply. The
+property revision and job checkpoint commit in one SQLite transaction. No next step runs
+automatically. Pausing/cancelling invalidates late model results; manual scene edits require
+fresh planning. Saved proposals survive restart and can be reviewed or discarded.
+
+Automatic outlines and model job context accept briefs up to 16,000 characters (manual job
+storage supports 64,000). Each step accepts 8,000 characters and 12 validated scene commands.
+Longer work must be split into explicit steps/jobs; this is not unlimited autonomous execution.
+Built-in commands support their existing small grammar; full instructions need a local model.
+Model quality, wall time and GPU usage still require workstation acceptance.

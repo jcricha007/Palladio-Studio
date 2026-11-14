@@ -154,6 +154,9 @@ def handler_for(library, agent=None, sites=None):
                     item = assets.import_data(data.get('name'), data.get('format'), data.get('data'), data.get('units', 'm'))
                     self.json_response(201, {k:v for k,v in item.items() if k!='mesh'})
                     return
+                if path == '/api/agent/job-outline':
+                    self.json_response(200,agent.outline(data.get('brief'),data.get('model')))
+                    return
                 if path == "/api/agent/models":
                     self.json_response(200, agent.models())
                     return
@@ -180,7 +183,11 @@ def handler_for(library, agent=None, sites=None):
                     return
                 job_match=JOB_ROUTE.fullmatch(path)
                 if job_match:
-                    self.json_response(200 if job_match[2] else 201,jobs.change(job_match[1],job_match[2],data) if job_match[2] else jobs.create(job_match[1],data))
+                    action=data.get('action')
+                    if job_match[2] and action=='propose':result=jobs.propose(job_match[1],job_match[2],data,agent)
+                    elif job_match[2] and action in ('review','apply','discard'):result=getattr(jobs,action)(job_match[1],job_match[2],data)
+                    else:result=jobs.change(job_match[1],job_match[2],data) if job_match[2] else jobs.create(job_match[1],data)
+                    self.json_response(200 if job_match[2] else 201,result)
                     return
                 match = PROPERTY_ROUTE.fullmatch(path)
                 if match and match[2] == "duplicate":

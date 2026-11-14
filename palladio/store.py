@@ -149,33 +149,37 @@ class Library:
             return self._insert(connection,name,baseline,scene,'Imported property snapshot')
 
     def commit(self, project_id, expected_revision, commands=None, restore=None):
+        with self.connect(write=True) as connection:
+            return self._commit(connection,project_id,expected_revision,commands,restore)
+
+    def _commit(self,connection,project_id,expected_revision,commands=None,restore=None):
+        """Caller owns the transaction, allowing a scene and job checkpoint to commit together."""
         if type(expected_revision) is not int or expected_revision < 1:
             raise ValidationError("A valid current revision is required.")
-        with self.connect(write=True) as connection:
-            current = self._read(connection, project_id)
-            if expected_revision != current["revision"]:
-                raise RevisionConflict("This property changed in another session. Reload it and retry.")
-            if restore is not None:
-                if type(restore) is not int or commands is not None:
-                    raise ValidationError("Choose a single revision to restore.")
-                row = connection.execute("""
-                    SELECT scene FROM revisions WHERE project_id = ? AND number = ?
-                """, (project_id, restore)).fetchone()
-                if row is None:
-                    raise ValidationError("That revision does not exist.")
-                scene = json.loads(row["scene"])
-                label = f"Restored revision {restore}"
-            else:
-                if not isinstance(commands, list) or not 1 <= len(commands) <= 100:
-                    raise ValidationError("Submit between 1 and 100 scene commands.")
-                scene = current["scene"]
-                labels = [edit_scene(scene, command, current["baseline"]) for command in commands]
-                label = labels[0] if len(labels) == 1 else f"Applied {len(labels)} edits"
-            revision = current["revision"] + 1
-            connection.execute("INSERT INTO revisions VALUES (?, ?, ?, ?)", (
-                project_id, revision, label, json.dumps(scene),
-            ))
-            connection.execute("UPDATE properties SET revision = ?, updated = ? WHERE id = ?", (
-                revision, timestamp(), project_id,
-            ))
-            return self._read(connection, project_id)
+        current = self._read(connection, project_id)
+        if expected_revision != current["revision"]:
+            raise RevisionConflict("This property changed in another session. Reload it and retry.")
+        if restore is not None:
+            if type(restore) is not int or commands is not None:
+                raise ValidationError("Choose a single revision to restore.")
+            row = connection.execute("""
+                SELECT scene FROM revisions WHERE project_id = ? AND number = ?
+            """, (project_id, restore)).fetchone()
+            if row is None:
+                raise ValidationError("That revision does not exist.")
+            scene = json.loads(row["scene"])
+            label = f"Restored revision {restore}"
+        else:
+            if not isinstance(commands, list) or not 1 <= len(commands) <= 100:
+                raise ValidationError("Submit between 1 and 100 scene commands.")
+            scene = current["scene"]
+            labels = [edit_scene(scene, command, current["baseline"]) for command in commands]
+            label = labels[0] if len(labels) == 1 else f"Applied {len(labels)} edits"
+        revision = current["revision"] + 1
+        connection.execute("INSERT INTO revisions VALUES (?, ?, ?, ?)", (
+            project_id, revision, label, json.dumps(scene),
+        ))
+        connection.execute("UPDATE properties SET revision = ?, updated = ? WHERE id = ?", (
+            revision, timestamp(), project_id,
+        ))
+        return self._read(connection, project_id)

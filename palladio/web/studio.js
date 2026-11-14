@@ -28,7 +28,7 @@ const assetTools = new AssetTools($, {api,run,preview:previewTool,showPlan,state
 const referenceTools = new ReferenceTools($,{run,preview:previewTool,state:()=>({project}),invalidate:discardOnEdit});
 const extensions=new Extensions($,{api,run,preview:previewTool,showPlan,commit,select,
   open:showProject,reloadLibrary:loadLibrary,invalidate:discardOnEdit,
-  state:()=>({project,selected,baselineView,catalog,viewport,busy})});
+  state:()=>({project,selected,baselineView,catalog,viewport,busy,provider:$("agent-provider").value,model:$("agent-model").value,query:$("agent-query").value,references:referenceTools.selected()})});
 
 function agentStatus(message, error = false) {
   $("agent-status").textContent = message;
@@ -257,7 +257,7 @@ async function loadLibrary() {
 function showPlan(plan = null) {
   pending = plan;
   $("proposal").hidden = !plan;
-  $("proposal-text").textContent = plan?.summary || "";
+  $("proposal-text").textContent = (plan?.job ? "Design job step · " : "") + (plan?.summary || "");
   $("proposal-source").textContent = plan ? (plan.provider === "ollama"
     ? `Local model: ${plan.model} · Suggested response · Revision ${plan.revision} · Not saved`
     : `${plan.provider === "tools" ? "Manual tools" : "Built-in commands"} · Revision ${plan.revision} · Not saved`) : "";
@@ -595,9 +595,11 @@ $("assembly-form").addEventListener("submit", event => {
   });
 });
 $("apply-plan").addEventListener("click", () => {
+  if(pending?.job){extensions.applyJob(pending);return;}
   if (pending) commit({commands: pending.commands || [pending.command]}, pending.revision);
 });
 $("discard-plan").addEventListener("click", () => {
+  if(pending?.job){extensions.discardJob(pending);return;}
   cancelAgentRequest();
   showPlan();
   status("Proposal discarded.");
