@@ -13,6 +13,7 @@ MATERIALS = {
     "glass": "#7fa7aa",
     "stone": "#8d8980",
     "plaster": "#e1d7c6",
+    "foliage": "#49734a",
 }
 ELEMENTS = {
     "wall": [5, 2.8, 0.25],
@@ -149,6 +150,9 @@ def edit_scene(scene, command, baseline=None):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if action=='planting':
+        from .planting import plant
+        return plant(scene,command,baseline)
     if action=='roof_fit':
         from .roofs import fit_roof
         return fit_roof(scene,command,baseline)

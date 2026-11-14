@@ -40,3 +40,12 @@ Shared partitions have one doorway on every adjoining room edge; the entrance is
 with the front-left room. Stable room/partition roles retain compatible overrides through
 resizing. Show room areas for clear dimensions excluding walls. Add a fitted roof separately.
 This is a schematic layout generator, not arbitrary floor-plan drafting or code compliance.
+
+## 5 · Planted landscape and terrain anchors
+
+Plant individual pines, broadleaf trees or hedges, or preview a repeatable seeded planting
+set of up to 64 objects. The Planted landscape panel anchors their bases to the current
+terrain, including later layer changes and original-ground restoration. Moves/copies retain
+explicit offsets; detach converts plants to independent pieces. Source/procedural vegetation
+is unchanged. Shapes are schematic and planting overlaps are left visible for review.
+Trees added through the generic assembly catalog remain unanchored until placed manually.

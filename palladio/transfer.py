@@ -82,6 +82,14 @@ def validate(packet):
             elements.append(checked)
         used=set();group_ids=set()
         for group in sequence(scene.get('assemblies',[]),500,'Assemblies'):
+            if not group.keys()<={'id','members','spec','overrides','ground_anchor'}:raise ValueError()
+            if 'ground_anchor' in group:
+                from .planting import PLANTS
+                from .placement import active_terrain,height_at
+                if group['spec']['kind'] not in PLANTS or set(group['ground_anchor'])!={'offset_m'}:raise ValueError()
+                offset=number(group['ground_anchor']['offset_m'],'Ground offset',-5,50)
+                x,y,z=group['spec']['position']
+                if abs(y-height_at(active_terrain(baseline,scene),x,z)-offset)>1e-8:raise ValueError()
             key=identifier(group['id'])
             if key in group_ids or key in ids: raise ValueError()
             group_ids.add(key)

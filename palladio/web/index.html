@@ -174,6 +174,15 @@
             <button id="terrain-restore" type="button">Preview restore original ground</button>
           </form>
         </details>
+        <details><summary>Planted landscape</summary><form id="planting-form" class="stack">
+          <p class="muted">Designed plants follow terrain changes. The original landscape stays saved. Preview spacing before Apply; overlaps are not resolved.</p>
+          <label>Type<select id="plant-kind"><option value="pine">Pine</option><option value="broadleaf">Broadleaf</option><option value="hedge">Hedge</option></select></label>
+          <label>Name<input id="plant-name" value="Planting" maxlength="50" required></label>
+          <div class="triplet"><label>Width<input id="plant-width" type="number" step="any" min="0.5" max="15" value="3"></label><label>Depth<input id="plant-depth" type="number" step="any" min="0.5" max="15" value="3"></label><label>Height<input id="plant-height" type="number" step="any" min="0.5" max="30" value="5"></label></div>
+          <div class="triplet"><label>X<input id="plant-x" type="number" value="15" step="any"></label><label>Z<input id="plant-z" type="number" value="15" step="any"></label><label>Offset (m)<input id="plant-offset_m" type="number" value="0" min="-5" max="50" step="any"></label></div>
+          <div class="triplet"><label>Count<input id="plant-count" type="number" value="1" min="1" max="64" step="1"></label><label>Radius (m)<input id="plant-radius_m" type="number" value="8" min="0" max="100" step="any"></label><label>Seed<input id="plant-seed" type="number" value="1" min="0" max="2147483647" step="1"></label></div>
+          <button type="submit">Preview planting</button>
+        </form></details>
         <hr>
         <details>
           <summary>Reusable assets</summary>

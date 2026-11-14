@@ -32,6 +32,9 @@ for _kind,_label in [('gable_roof','Gable roof'),('hip_roof','Hip roof'),('shed_
         'limits':{'width':[2,40],'depth':[2,40],'height':[.2,8]}}
 ASSEMBLIES['dwelling']={'label':'Connected rooms','width':10,'depth':9,'height':3,'material':'plaster',
     'limits':{'width':[6,40],'depth':[6,40],'height':[2.5,8]}}
+for _kind,_label,_height in [('pine','Pine tree',7),('broadleaf','Broadleaf tree',5),('hedge','Hedge',1.5)]:
+    ASSEMBLIES[_kind]={'label':_label,'width':3,'depth':3,'height':_height,'material':'foliage',
+        'limits':{'width':[.5,15],'depth':[.5,15],'height':[.5,30]}}
 
 
 def generate_assembly(data):
@@ -89,6 +92,8 @@ def generate_assembly(data):
         spec['overhang']=number(data.get('overhang',.3),'Roof overhang',0,3)
         return spec,[roof_part(spec)]
     if 'overhang' in data: raise ValidationError('Overhang applies to roof assemblies.')
+    from .planting import PLANTS,plant_parts
+    if kind in PLANTS:return spec,plant_parts(spec)
     pieces = []
     roles = {}
     angle = math.radians(spec["yaw"])

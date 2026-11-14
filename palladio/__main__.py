@@ -32,6 +32,7 @@ STATIC = {
     "/layout.js": ("layout.js", "text/javascript"),
     "/roofs.js": ("roofs.js", "text/javascript"),
     "/rooms.js": ("rooms.js", "text/javascript"),
+    "/planting.js": ("planting.js", "text/javascript"),
     "/tools.js": ("tools.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
