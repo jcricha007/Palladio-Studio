@@ -1,6 +1,6 @@
 # Palladio Studio build roadmap
 
-Updated 16 November 2026. PRs #14–#23 were verified merged into `main` at `8122b57`;
+Updated 15 November 2026. PRs #14–#23 were verified merged into `main` at `8122b57`;
 its tree matches the tested ten-PR stack. [STUDIO_NEXT.md](STUDIO_NEXT.md) records that
 completed series. [ARCHITECTURE_NEXT.md](ARCHITECTURE_NEXT.md) tracks the next five PRs.
 Merging does not establish workstation acceptance; the evidence below remains separate.
@@ -26,9 +26,11 @@ request-scoped planning cancellation. A fresh acceptance property and Windows ch
 the combined stack; [the walkthrough](ARCHITECTURE_ACCEPTANCE.md) separates compilation from
 interactive outcomes. These changes are open for review, not merged into the verified main.
 
-Current local evidence at this stack tip: **125 Python tests and 18 Node suites passed**, with
+Current local evidence at this stack tip: **125 Python tests and 19 Node suites passed**, with
 JavaScript/Python syntax and diff checks. Python uses real loopback HTTP and fake models;
-Node uses DOM doubles and geometry comparisons. PowerShell execution, UE compilation,
+Node uses DOM doubles and geometry comparisons, tested with LF and Windows CRLF checkouts.
+The test fixtures now explicitly close SQLite handles and isolate UI startup across both
+line-ending formats. PowerShell execution, UE compilation,
 rendering/collision, rendered browser acceptance and real-model quality/latency/VRAM remain
 outstanding. Optional Chromium acceptance is supplied; startup was previously blocked by
 this environment. Hosted CI remains skipped. Historical counts below describe earlier stages.

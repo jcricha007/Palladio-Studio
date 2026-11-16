@@ -89,9 +89,15 @@ viewers. See [ARCHITECTURE_ACCEPTANCE.md](ARCHITECTURE_ACCEPTANCE.md) for the wa
 Topology edits keep the edited group selected when a wall span is replaced. Camera controls
 stay aligned with reset/recalled views. These integration fixes are part of the final package.
 
-Final local evidence: **125 Python tests and 18 Node suites passed**, including real loopback
+Final local evidence: **125 Python tests and 19 Node suites passed**, including real loopback
 HTTP with fake models, request-stop races, atomic tools, transfers, native payloads and fixture
 creation. JavaScript syntax, optional browser-script Python syntax and diff checks passed.
 The optional rendered smoke workflow now covers the new controls; it has not run here.
 PowerShell execution, native compilation/rendering/collision and real-model quality remain
 Windows acceptance work. Hosted CI is deliberately skipped.
+
+Windows test compatibility: migration fixtures explicitly close SQLite connections before
+temporary-directory cleanup. The UI harness normalizes LF/CRLF in memory and requires a
+known startup boundary before evaluating the workspace code. Its new regression runs both
+assembly/agent suites against LF and CRLF source; the full 19-suite Node run also passes
+against both checkout formats. This verifies line-ending handling, not a native Windows run.
