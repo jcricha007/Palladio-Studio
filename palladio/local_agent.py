@@ -153,8 +153,12 @@ CAMERA_FIELDS = {'target': VECTOR, 'azimuth': {'type': 'number'},
                  'distance': {'type': 'number', 'minimum': 2, 'maximum': 3000},
                  'fov_degrees': {'type': 'number', 'minimum': 15, 'maximum': 100}}
 PLANTING_FIELDS = {
-    'kind': {'enum': ['pine', 'broadleaf', 'hedge']}, 'name': TEXT,
-    **{key: ASSEMBLY_FIELDS[key] for key in ('width', 'depth', 'height')},
+    'kind': {'enum': ['pine', 'broadleaf', 'hedge']},
+    'name': {'type': 'string', 'minLength': 1, 'maxLength': 50,
+             'description': 'Requested base name before automatic numbering. If unspecified, capitalize kind: Pine, Broadleaf or Hedge.'},
+    **{key: {**deepcopy(ASSEMBLY_FIELDS[key]),
+             'description': f'Explicit plant {key} in metres. Use the requested value, or the selected plant catalog value when unspecified.'}
+       for key in ('width', 'depth', 'height')},
     'center': LAYER_FIELDS['center'], 'radius_m': {'type': 'number', 'minimum': 0, 'maximum': 100},
     'count': {'type': 'integer', 'minimum': 1, 'maximum': 64},
     'seed': {'type': 'integer', 'minimum': 0, 'maximum': 2147483647},
@@ -177,7 +181,7 @@ def design_schemas():
             'foundation': {'anyOf': [object_schema(FOUNDATION_FIELDS, []), {'type': 'null'}]},
         }, ['shell', 'ground_offset_m'])}),
         object_schema({'action': {'const': 'roof_fit'}, 'id': TEXT, 'roof': object_schema(ROOF_FIELDS, ['kind'])}),
-        object_schema({'action': {'const': 'planting'}, 'planting': object_schema(PLANTING_FIELDS, ['kind', 'center'])}),
+        object_schema({'action': {'const': 'planting'}, 'planting': object_schema(PLANTING_FIELDS)}),
         *[object_schema({'action': {'const': 'layout'}, 'layout': object_schema({
             'operation': {'const': operation}, 'ids': ID_LIST,
             **{key: LAYOUT_FIELDS[key] for key in fields}})}) for operation, fields in LAYOUT_PARAMETERS.items()],
@@ -372,6 +376,11 @@ move/copy use an XYZ offset; rotate uses degrees around the first object's origi
 first object's origin on one axis; distribute spaces at least three origins between the outermost;
 grid snaps all three coordinates. State the whole-object scope. No collision avoidance is performed.
 planting scatters 1-64 pine/broadleaf/hedge objects in an X/Z circle using a repeatable integer seed.
+Every planting field is required in the command: kind, name, width, depth, height, center,
+radius_m, count, seed and offset_m. Copy requested names and dimensions into planting itself;
+mentioning them only in summary does not set them. For unspecified or default values, explicitly
+use the selected plant's catalog dimensions and tool_defaults.planting. name is the base name;
+the application adds a space and 1-based index when count > 1. Never append that index yourself.
 Their bases follow terrain edits. Counts greater than one require radius_m >= 0.1.
 finish_apply uses a supplied finish ID and element IDs; scope part edits only those parts, while
 scope assembly affects every linked member. finish_save captures a visible source part into the
@@ -729,6 +738,14 @@ def validated_plan(project, output, allowed_ids, allowed_groups=(), allowed_laye
             raise ValidationError('The model targeted a finish outside its scene context.')
         if action == 'finish_save': check_elements([command['source_id']])
         if action == 'finish_apply': check_elements(command['ids'], command['scope'] == 'assembly')
+        if action == 'planting':
+            data = command['planting']
+            if not isinstance(data, dict):
+                raise ValidationError('Choose supported planting fields.')
+            missing = PLANTING_FIELDS.keys() - data.keys()
+            if missing:
+                raise ValidationError('A planting proposal must explicitly include ' + ', '.join(sorted(missing)) +
+                                      '; the summary does not set planting parameters.')
         if action == 'layout':
             layout = command['layout']
             if not isinstance(layout, dict) or not isinstance(layout.get('operation'), str) or layout['operation'] not in LAYOUT_PARAMETERS:

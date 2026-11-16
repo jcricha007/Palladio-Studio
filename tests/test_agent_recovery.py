@@ -149,7 +149,8 @@ class RecoveryTests(unittest.TestCase):
             elif 'building tool' in prompt: return reply('{invalid')
             else:
                 commands = [{'action': 'planting', 'planting': {'kind': 'pine', 'name': 'Courtyard pine',
-                             'width': 4, 'height': 5, 'center': [12, 12], 'radius_m': 3, 'count': 4, 'seed': 17}}]
+                             'width': 4, 'depth': 3, 'height': 5, 'center': [12, 12], 'radius_m': 3,
+                             'count': 4, 'seed': 17, 'offset_m': 0}}]
             return reply(json.dumps({'summary': 'Fixture', 'commands': commands}))
         with patch.object(OllamaPlanner, '_request', side_effect=request): report = check_design('local:latest', 11435)
         window, building, planting = report['cases']

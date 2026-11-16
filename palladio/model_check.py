@@ -6,7 +6,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import time
 
-from .local_agent import AgentService, OllamaPlanner, validated_plan
+from .commands import preview_commands
+from .local_agent import AgentService, OllamaPlanner
 from .store import Library
 
 
@@ -107,9 +108,9 @@ def check_design(model, port):
             started = time.perf_counter()
             report = {'case': case, 'passed': False}
             try:
-                target = validated_plan(project, {'summary': 'Acceptance target', 'commands': expected},
-                                        {e['id'] for e in project['scene']['elements']},
-                                        {g['id'] for g in project['scene'].get('assemblies', [])})
+                # Resolve the unchanged target through manual tools. Their default
+                # parameters are independent of the stricter model output contract.
+                target = preview_commands(project, project['revision'], expected)
                 result = service.preview(project, prompt, selection, provider='ollama', model=model, revision=project['revision'])
                 report['commands'] = result['commands']
                 if library.get(project['id']) != project:

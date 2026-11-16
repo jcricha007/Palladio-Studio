@@ -112,7 +112,8 @@ class AgentDesignTests(unittest.TestCase):
 
     def test_planting_follows_terrain_and_explicit_restore(self):
         command = {'action': 'planting', 'planting': {'kind': 'pine', 'count': 4, 'seed': 17,
-                   'center': [12, 12], 'radius_m': 3, 'height': 5}}
+                   'center': [12, 12], 'radius_m': 3, 'height': 5,
+                   'name': 'Pine', 'width': 3, 'depth': 3, 'offset_m': 0}}
         plan = self.preview([command]); self.edit(*plan['commands'])
         self.assertEqual(geometry(self.project['scene']), geometry(plan['scene']))
         self.edit({'action': 'terrain_layer', 'layer': {'mode': 'raise', 'center': [12, 12], 'radius_m': 10, 'amount_m': 2}})

@@ -72,6 +72,13 @@ the catalog height. Shell height and roof rise are documented as separate fields
 These checks do not prove that a model followed every dimension in a natural-language
 request; the full-scene acceptance comparison and user review remain necessary.
 
+Planting proposals must explicitly include every parameter, including base name and
+width/depth/height. Unspecified values come from the catalog and tool defaults; sets
+receive automatic numbered suffixes. Missing fields reject the entire proposal before
+preview, even when the summary mentions the requested values. Manual planting tools
+retain their existing defaults. The acceptance harness computes its unchanged target
+through those manual tools and compares the complete model-generated scene against it.
+
 ## Validation
 
 Run the normal suite with `scripts/Validate-Palladio.ps1`. The added tests exercise
