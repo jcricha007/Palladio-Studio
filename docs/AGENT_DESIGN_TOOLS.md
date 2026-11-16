@@ -28,6 +28,14 @@ The assembly grammar now exposes only fields valid for each kind. In particular,
 openings. Garage/room window requests use `window_width`, `window_height` and
 `window_sill`. Invalid fields are rejected rather than silently discarded.
 
+Element update schemas also distinguish linked assembly members from independent
+objects. A linked part exposes only name, material and finish overrides; it cannot
+be resized, moved, rotated, retyped or removed individually through that grammar.
+Window geometry edits use the owning assembly's window controls. Context marks each
+linked part with its owner and editable fields, even when the owner's full record
+does not fit the excerpt. Independent geometry controls become available after an
+explicit detach has been applied and the next preview reads the updated scene.
+
 ## Example prompts
 
 - Create an 8 m by 6 m garage named Workshop at X 0, Z 0, with a gable roof. Place it on the ground.

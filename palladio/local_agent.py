@@ -13,6 +13,7 @@ from .commands import placement_warnings
 from .placement import active_terrain, height_at
 from .references import selected_references
 from .geometry import PATTERNS
+from .groups import MEMBER_EDIT_FIELDS
 from .scene import ELEMENTS, MATERIALS, WEATHER, ValidationError, edit_scene, required_text
 from .store import RevisionConflict
 
@@ -244,12 +245,28 @@ def plan_schema(context):
     all_ids = [key for ids in by_kind.values() for key in ids]
     elements = context.get('elements', [])
     element_ids = [item['id'] for item in elements]
+    independent_ids = [item['id'] for item in elements if not item.get('assembly_id')]
+    member_ids = [item['id'] for item in elements if item.get('assembly_id')]
     layout_ids = [item['id'] for item in elements if not item.get('assembly_id') or item['assembly_id'] in all_ids]
     finish_ids = [item['id'] for item in context.get('finishes', [])]
     commands = []
     for command in schema['properties']['commands']['items']['oneOf']:
         command = deepcopy(command)
         action = command['properties']['action']['const']
+        if action == 'update':
+            # Match the real ownership rules, even if the owner was omitted from
+            # a partial scene excerpt. A linked part is never an independent box.
+            for ids, fields, description in (
+                    (independent_ids, ELEMENT_FIELDS, 'Independent elements only: no assembly_id in scene context.'),
+                    (member_ids, MEMBER_EDIT_FIELDS, 'Linked assembly parts: name/material/finish only. Use assembly_update and assembly_id for geometry.')):
+                if not ids: continue
+                parameters = object_schema({key: deepcopy(value) for key, value in ELEMENT_FIELDS.items()
+                                            if key in fields}, [])
+                parameters['minProperties'] = 1
+                commands.append({**object_schema({'action': {'const': 'update'},
+                    'id': {'type': 'string', 'enum': list(ids)}, 'element': parameters}),
+                    'description': description})
+            continue
         if action == 'layout':
             if not layout_ids: continue
             command['properties']['layout']['properties']['ids']['items'] = {'enum': list(layout_ids)}
@@ -289,8 +306,8 @@ def plan_schema(context):
             ids = [item['id'] for item in context.get('terrain_layers', [])]
         elif action == 'wall_convert':
             ids = [item['id'] for item in elements if item['kind'] == 'wall' and not item.get('assembly_id') and 'mesh_summary' not in item]
-        elif action in ('update', 'remove'):
-            ids = element_ids
+        elif action == 'remove':
+            ids = independent_ids
         elif action.startswith('assembly_'):
             ids = all_ids
         else:
@@ -346,6 +363,9 @@ width/depth/height default to the selected plant's catalog values and offset_m d
 Only use IDs supplied in context. Context may be partial: never infer omitted objects.
 Use only catalog types/materials/assemblies. New assembly parts belong to linked groups. Individual material/name/finish overrides are allowed;
 individual geometry edits need assembly_detach first, only when the user requests independent parts.
+For a linked window, use assembly_update with its assembly_id and the shell's window controls;
+do not resize glazing or adjacent wall parts. Linked parts allow only name, material and finish
+updates and cannot be individually removed. Do not detach as a workaround for a parametric edit.
 Detachment keeps the geometry but loses linked parametric editing. New assemblies are schematic,
 not photorealistic or building-code validated. Use the supplied assembly ID for a whole-group edit, placement, copy or removal;
 these operations affect every linked part, including parts outside the excerpt. State this scope in the summary.
@@ -614,7 +634,9 @@ def scene_context(project, selection, query=''):
     for item in ordered[:40]:
         compact = {k:deepcopy(v) for k,v in item.items() if k != 'mesh'}
         if 'mesh' in item: compact['mesh_summary'] = {'triangles':len(item['mesh']['triangles'])//3,'vertices':len(item['mesh']['vertices'])}
-        if item['id'] in memberships: compact['assembly_id'] = memberships[item['id']]['id']
+        if item['id'] in memberships:
+            compact['assembly_id'] = memberships[item['id']]['id']
+            compact['editable_fields'] = sorted(MEMBER_EDIT_FIELDS)
         length = len(json.dumps(compact, ensure_ascii=False))
         if size + length > MAX_CONTEXT - 3500:
             break
