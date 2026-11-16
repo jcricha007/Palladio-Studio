@@ -64,6 +64,13 @@ its late reply. Wrong but valid design proposals are not silently rewritten.
 
 When defaults are requested, the model is instructed to omit optional parameters.
 The context includes planting and building-tool defaults, alongside catalog dimensions.
+Room and garage opening defaults now come directly from the geometry generator. New
+assembly output schemas require explicit width, depth and height, using catalog values
+for unspecified dimensions. Building proposals missing any shell dimension are also
+rejected server-side, so a height mentioned only in the summary cannot silently become
+the catalog height. Shell height and roof rise are documented as separate fields.
+These checks do not prove that a model followed every dimension in a natural-language
+request; the full-scene acceptance comparison and user review remain necessary.
 
 ## Validation
 
