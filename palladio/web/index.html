@@ -213,6 +213,23 @@
           </div>
           <p id="asset-status" role="status" class="muted"></p>
         </details>
+        <details id="wall-tools" class="stack"><summary>Wall openings</summary>
+          <p class="muted">Add a Wall with openings in the assembly builder, then select one of its parts. Rough opening sizes include the frames. Doors remain open.</p>
+          <button id="wall-convert" type="button">Preview converting independent wall</button>
+          <label>Saved opening<select id="opening-list"></select></label>
+          <button id="opening-new" type="button">New opening fields</button>
+          <form id="opening-form" class="stack">
+            <label>Opening key<input id="opening-key" maxlength="24" pattern="[A-Za-z0-9_-]+" required></label>
+            <label>Kind<select id="opening-kind"><option value="window">Window</option><option value="door">Door</option></select></label>
+            <label>Centre along wall (m)<input id="opening-center" type="number" step="any" value="0" required></label>
+            <label>Rough width (m)<input id="opening-width" type="number" step="any" min="0.5" value="1.2" required></label>
+            <label>Rough height (m)<input id="opening-height" type="number" step="any" min="0.5" value="1.2" required></label>
+            <label>Sill height (m)<input id="opening-sill" type="number" step="any" min="0" value="0.9" required></label>
+            <label>Frame width (m)<input id="opening-frame" type="number" step="any" min="0.05" max="0.2" value="0.06" required></label>
+            <button type="submit">Preview opening</button>
+          </form>
+          <button id="opening-remove" type="button">Preview removing opening</button>
+        </details>
         <details id="jobs-panel" class="stack">
           <summary>Design jobs</summary>
           <p class="muted">Keep a brief and ordered steps across sessions. Complete each step with a reviewed property revision and a checkpoint note.</p>

@@ -151,6 +151,9 @@ def edit_scene(scene, command, baseline=None):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
     if not isinstance(action,str):raise ValidationError("Choose a supported scene action.")
+    if action in ('opening_set','opening_remove','wall_convert'):
+        from .walls import edit_opening
+        return edit_opening(scene,command,baseline)
     if action in ('view_save','view_update','view_remove'):
         from .presentation import edit_view
         return edit_view(scene,command)

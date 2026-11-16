@@ -1,13 +1,13 @@
 # Palladio Studio build roadmap
 
-Updated 14 November 2026. PRs #8–#12 were verified on `main` at `adbcfd0`. The next ten
-implementation PRs are a review stack, not yet part of that verified main snapshot.
-[STUDIO_NEXT.md](STUDIO_NEXT.md) records their merge order, limits and acceptance commands.
-Milestone numbers describe product areas; merging an increment does not close every check.
+Updated 15 November 2026. PRs #14–#23 were verified merged into `main` at `8122b57`;
+its tree matches the tested ten-PR stack. [STUDIO_NEXT.md](STUDIO_NEXT.md) records that
+completed series. [ARCHITECTURE_NEXT.md](ARCHITECTURE_NEXT.md) tracks the next five PRs.
+Merging does not establish workstation acceptance; the evidence below remains separate.
 
-## Current development stack
+## Implemented through PR #23
 
-| Area | Implemented in the new stack | Still ahead |
+| Area | Implemented through PR #23 | Still ahead |
 | --- | --- | --- |
 | Property portability | Checksummed snapshots with original ground, design, references, meshes, palettes and views; independent import | History/job transfer, larger interchange formats |
 | Architecture and layout | Multi-object layout/measurement, closed roof envelopes, connected rectangular room grids and clear-area schedules | Arbitrary floor-plan drafting, framing, support/collision design feedback |
@@ -218,7 +218,7 @@ measurements, automatic saves, native agent panel or autonomous long-job executi
 
 ## Where development goes next
 
-1. Review and merge the ten increments in order, then run the Windows acceptance script on
+1. Run the Windows acceptance script for the next five-PR architecture series on
    the exact final commit. Reopen existing properties and verify the pre-upgrade backup.
 2. Walk through connected rooms, roof fitting, plant grounding, finishes and imported meshes
    in both viewports. Check collision, silhouettes, transformations and original-site restore.

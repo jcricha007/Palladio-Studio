@@ -1,8 +1,8 @@
 # Studio development series after PR #12
 
-Base: `main` at `adbcfd0`. Each increment targets the preceding branch. Merge in order;
-retarget successors to main after their base merges. These are implementations awaiting
-review, not assertions of Windows or real-model acceptance. Commits skip hosted CI.
+Merged into `main` at `8122b57` on 15 November 2026 (U.S. Eastern). The merged tree
+matches the final stack. The evidence and remaining workstation acceptance below are
+preserved; the next series is in [ARCHITECTURE_NEXT.md](ARCHITECTURE_NEXT.md).
 
 | Order | PR | Upgrade | Base |
 | --- | --- | --- | --- |
@@ -15,7 +15,7 @@ review, not assertions of Windows or real-model acceptance. Commits skip hosted 
 | 7 | [#20](https://github.com/jcricha007/Palladio-Studio/pull/20) | Saved views/export | #19 |
 | 8 | [#21](https://github.com/jcricha007/Palladio-Studio/pull/21) | Persistent jobs | #20 |
 | 9 | [#22](https://github.com/jcricha007/Palladio-Studio/pull/22) | Agent job review | #21 |
-| 10 | `palladio/windows-release` (this PR) | Launch, backup and acceptance | #22 |
+| 10 | [#23](https://github.com/jcricha007/Palladio-Studio/pull/23) | Launch, backup and acceptance | #22 |
 
 ## 1 · Portable property snapshots
 

@@ -37,10 +37,14 @@ for _kind,_label,_height in [('pine','Pine tree',7),('broadleaf','Broadleaf tree
         'limits':{'width':[.5,15],'depth':[.5,15],'height':[.5,30]}}
 
 
+ASSEMBLIES['wall_run']={'label':'Wall with openings','width':6,'depth':.2,'height':3,'material':'plaster',
+    'limits':{'width':[.5,50],'depth':[.1,1],'height':[.5,12]}}
+
+
 def generate_assembly(data):
     if not isinstance(data, dict) or not data.keys() <= {
         "kind", "name", "width", "depth", "height", "position", "yaw", "material",
-        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang", "rooms_x", "rooms_z"
+        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang", "rooms_x", "rooms_z", "openings", "wall_finish"
     }:
         raise ValidationError("Choose supported assembly fields.")
     kind = data.get("kind")
@@ -59,6 +63,11 @@ def generate_assembly(data):
         "yaw": number(data.get("yaw", 0), "Assembly rotation", -360, 360),
         "material": data.get("material", defaults["material"]),
     }
+    if kind=='wall_run':
+        if set(data)&{'door_width','door_height','window_width','window_height','window_sill','overhang','steps','rooms_x','rooms_z'}:raise ValidationError('Wall runs use their opening list instead of shell or roof controls.')
+        from .walls import wall_parts
+        return wall_parts(spec,data)
+    if 'openings' in data or 'wall_finish' in data:raise ValidationError('Opening lists apply to wall-run assemblies.')
     if kind=='dwelling':
         from .rooms import dwelling
         return dwelling(spec,data)
