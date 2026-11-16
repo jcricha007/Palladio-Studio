@@ -7,6 +7,7 @@ import re
 from uuid import uuid4
 
 MATERIALS = {
+    "water": "#397c98",
     "concrete": "#b0a598",
     "oak": "#b78554",
     "charred timber": "#3a3632",
@@ -119,6 +120,9 @@ def element(data):
         "size": vector(data.get("size"), "Size (m)", 0.05, 300),
         "yaw": number(data.get("yaw", 0), "Rotation (degrees)", -360, 360),
     }
+    if 'collision' in data:
+        if type(data['collision']) is not bool:raise ValidationError('Collision must be true or false.')
+        result['collision']=data['collision']
     if 'mesh' in data:
         from .geometry import mesh
         result['mesh'] = mesh(data['mesh'])
@@ -151,7 +155,13 @@ def edit_scene(scene, command, baseline=None):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
     if not isinstance(action,str):raise ValidationError("Choose a supported scene action.")
-    if action in ('view_save','view_update','view_remove'):
+    if action in ('foundation_fit','foundation_refit'):
+        from .foundations import edit_foundation
+        return edit_foundation(scene,command,baseline)
+    if action in ('opening_set','opening_remove','wall_convert'):
+        from .walls import edit_opening
+        return edit_opening(scene,command,baseline)
+    if action in ('view_save','view_update','view_remove','view_capture'):
         from .presentation import edit_view
         return edit_view(scene,command)
     if action in ('finish_save','finish_apply','finish_remove'):

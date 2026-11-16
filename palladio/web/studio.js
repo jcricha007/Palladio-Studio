@@ -325,8 +325,12 @@ function showProject(next, resetView = false) {
     viewport?.reset();
     $("request").value = "";
   }
+  const previousOwner=project?.scene.assemblies?.find(group=>Object.values(group.members).includes(selected));
   project = next;
-  if (!project.scene.elements.some(item => item.id === selected)) selected = null;
+  if (!project.scene.elements.some(item => item.id === selected)) {
+    const group=previousOwner&&project.scene.assemblies?.find(group=>group.id===previousOwner.id);
+    selected=group?Object.values(group.members)[0]??null:null;
+  }
   history.replaceState(null, "", "#" + project.id);
   showPlan();
   render();
@@ -513,7 +517,7 @@ for (const [id, mode] of [["design-view", false], ["baseline-view", true]]) {
     render();
   });
 }
-$("frame").addEventListener("click", () => viewport?.reset());
+$("frame").addEventListener("click", () => {viewport?.reset();$("view-fov").value=viewport?.captureCamera?.().fov_degrees??45;});
 $("environment").addEventListener("submit", event => {
   event.preventDefault();
   const [hours, minutes] = $("hour").value.split(":").map(Number);

@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
+const {readStudio}=require('./helpers/studio-source.cjs');
 // State tests with a minimal DOM/viewport double; not browser/WebGL acceptance.
 // Run from the repository root: node tests/test_assembly_ui.cjs
 const root=process.argv[2] || process.cwd();
@@ -17,11 +18,11 @@ const node=id=>nodes.get(id)|| (nodes.set(id,new Node(id)),nodes.get(id));
 for(const m of fs.readFileSync(root+'/palladio/web/index.html','utf8').matchAll(/id="([^"]+)"/g))node(m[1]);
 const updates=[];let requests=[];let response;
 const context=vm.createContext({console,Extensions:class{sync(){}render(){}},DesignTools:class{sync(){}render(){}},AssetTools:class{sync(){}render(){}},ReferenceTools:class{sync(){}render(){}selected(){return [];}},Option:function(label,value){this.label=label;this.value=value},document:{getElementById:node,querySelectorAll(){return [...nodes.values()]},createElement(){return new Node()}},history:{replaceState(){}},location:{hash:''},Viewport:class{reset(){} update(...x){updates.push(x)}},fetch:async(path,options)=>{requests.push({path,options});return response(path,options)}});
-let source=fs.readFileSync(root+'/palladio/web/studio.js','utf8').replace(/^import .+;$/gm,'');
-source=source.slice(0,source.lastIndexOf('\nrender();\nrun(async'));
+const source=readStudio(root);
 vm.runInContext(fs.readFileSync(root+'/palladio/web/site-picker.js','utf8')
   .replace(/^import .+;$/gm,'').replace('export class SitePicker','class SitePicker'),context);
 vm.runInContext(source,context);
+assert.equal(requests.length,0,'Loading the UI test harness must not run application startup requests.');
 const evaluate=s=>vm.runInContext(s,context);
 const scene={elements:[{id:'saved',name:'Wall',material:'oak',position:[0,0,0],size:[1,1,1],yaw:0}],environment:{weather:'clear',hour:16}};
 const project={id:'one',name:'Property',revision:1,history:[{number:1,label:'created'}],scene,baseline:{environment:scene.environment,source:{profile:'meadow'}}};
@@ -47,6 +48,7 @@ node('design-view').events.click[0]();evaluate('showPlan(plan); showProject({...
  response=async(path)=>{if(path.endsWith('/edit')){await gate;return {ok:true,json:async()=>({...project,revision:2,scene:{...scene,elements:[...scene.elements,{...scene.elements[0],id:'new'}]},history:[{number:2,label:'assembly'},{number:1,label:'created'}]})}}return {ok:true,json:async()=>[]}};
  node('apply-plan').events.click[0]();node('apply-plan').events.click[0]();
  assert.equal(requests.length,1);assert.equal(node('assembly-kind').disabled,true);assert.equal(node('discard-plan').disabled,true);
+ assert.equal(requests[0].path,'/api/properties/one/edit');assert.equal(requests[0].options.method,'POST');
  assert.equal(JSON.parse(requests[0].options.body).revision,1);assert.equal(JSON.parse(requests[0].options.body).commands.length,1);
  release(); await new Promise(r=>setImmediate(r));await new Promise(r=>setImmediate(r));
  assert.equal(evaluate('project.revision'),2);assert.equal(node('proposal').hidden,true);assert.equal(node('assembly-kind').disabled,false);
@@ -55,5 +57,11 @@ node('design-view').events.click[0]();evaluate('showPlan(plan); showProject({...
  response=async()=>({ok:false,json:async()=>({error:'Reload stale property'})});
  node('apply-plan').events.click[0]();await new Promise(r=>setImmediate(r));
  assert.equal(evaluate('project.revision'),2);assert.equal(node('proposal').hidden,true);assert.match(node('status').textContent,/Reload stale/);
+ // Topology edits can replace the selected wall span; retain its group in the inspector.
+ evaluate('showProject({...fixture,scene:{...fixture.scene,assemblies:[{id:"wall",members:{span:"saved"}}]}});select("saved");');
+ evaluate('showProject({...fixture,revision:3,scene:{...fixture.scene,elements:[{...fixture.scene.elements[0],id:"frame"}],assemblies:[{id:"wall",members:{frame:"frame"}}]}})');
+ assert.equal(evaluate('selected'),'frame');
+ evaluate('showProject({...fixture,revision:4,scene:{...fixture.scene,elements:[],assemblies:[]}})');assert.equal(evaluate('selected'),null);
+ console.log('PASS: topology selection continuity');
  console.log('PASS: preview immutability, discard, input/change invalidation, selection, baseline/property switching, repeated apply, busy controls, revision binding, stale apply');
 })().catch(e=>{console.error(e);process.exitCode=1});

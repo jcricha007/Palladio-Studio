@@ -201,7 +201,9 @@ void APalladioGameMode::AddMesh(const TSharedPtr<FJsonObject>& Element, bool bSe
     auto* Mesh = NewObject<UProceduralMeshComponent>(Actor);
     Mesh->SetMobility(EComponentMobility::Movable);
     Actor->SetRootComponent(Mesh);
-    Mesh->SetCollisionProfileName(TEXT("BlockAll"));
+    bool bBlocksWalking = true;
+    Element->TryGetBoolField(TEXT("collision"), bBlocksWalking);
+    Mesh->SetCollisionProfileName(bBlocksWalking ? TEXT("BlockAll") : TEXT("NoCollision"));
     Mesh->bUseComplexAsSimpleCollision = true;
     Mesh->RegisterComponent();
     // A plain AActor has no root when spawned; set its transform after attaching one.
@@ -228,7 +230,7 @@ void APalladioGameMode::AddMesh(const TSharedPtr<FJsonObject>& Element, bool bSe
         }
         for (FVector& Normal : Normals) Normal.Normalize();
         Mesh->CreateMeshSection_LinearColor(SectionIndex, Vertices, Indices, Normals,
-            TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), true);
+            TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), bBlocksWalking);
         Mesh->SetMaterial(SectionIndex, Tint(bSelected ? FColor::FromHex(TEXT("F0BC6A")) : FColor::FromHex(Section->GetStringField(TEXT("color")))));
         ++SectionIndex;
     }
@@ -306,11 +308,13 @@ void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
         {
             const auto& Element = Value->AsObject();
             const FVector Center = VectorField(Element, TEXT("center_cm"));
+            bool bBlocksWalking = true;
+            Element->TryGetBoolField(TEXT("collision"), bBlocksWalking);
             const bool bSelected = Element->GetStringField(TEXT("id")) == Selection;
             if (Element->HasTypedField<EJson::Array>(TEXT("mesh_sections"))) AddMesh(Element, bSelected);
             else AddShape(Cube, Center, VectorField(Element, TEXT("dimensions_cm")),
                 Element->GetNumberField(TEXT("yaw_degrees")), FColor::FromHex(Element->GetStringField(TEXT("color"))),
-                bSelected, true);
+                bSelected, bBlocksWalking);
             if (bSelected)
             {
                 Focus = Center;
@@ -318,8 +322,16 @@ void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
         }
     }
 
+    const TArray<TSharedPtr<FJsonValue>>* Views = nullptr;
+    if (!View->TryGetArrayField(TEXT("views"), Views) || !Views->ContainsByPredicate([this](const auto& Value)
+        { return Value->AsObject()->GetStringField(TEXT("id")) == ActiveView; }))
+    {
+        ActiveView.Reset();
+        ActiveViewName.Reset();
+    }
     auto* Player = GetWorld()->GetFirstPlayerController();
-    if (auto* Navigator = Player ? Cast<APalladioNavigator>(Player->GetPawn()) : nullptr)
+    if (auto* Navigator = Player ? Cast<APalladioNavigator>(Player->GetPawn()) : nullptr;
+        Navigator && ActiveView.IsEmpty())
     {
         Navigator->SetOrbitFocus(Focus);
     }
@@ -367,6 +379,62 @@ void APalladioGameMode::MoveSelection(const FVector& DeltaMetres)
     }
 }
 
+void APalladioGameMode::RecallView(int32 Direction)
+{
+    if (bBaseline || bReloadRequired) return;
+    const TArray<TSharedPtr<FJsonValue>>* Views = nullptr;
+    if (!Current->TryGetArrayField(TEXT("views"), Views) || Views->IsEmpty())
+    {
+        Status = TEXT("Save a view in the browser, apply it, then press R and V here.");
+        return;
+    }
+    const int32 Index = Views->IndexOfByPredicate([this](const auto& Value)
+        { return Value->AsObject()->GetStringField(TEXT("id")) == ActiveView; });
+    const int32 Next = Index == INDEX_NONE ? (Direction > 0 ? 0 : Views->Num() - 1)
+        : (Index + Direction + Views->Num()) % Views->Num();
+    const auto& View = (*Views)[Next]->AsObject();
+    auto* Player = GetWorld()->GetFirstPlayerController();
+    auto* Navigator = Player ? Cast<APalladioNavigator>(Player->GetPawn()) : nullptr;
+    if (Navigator && Navigator->RecallSavedView(VectorField(View, TEXT("target_cm")),
+        VectorField(View, TEXT("eye_cm")), View->GetNumberField(TEXT("vertical_fov_degrees"))))
+    {
+        ActiveView = View->GetStringField(TEXT("id"));
+        ActiveViewName = View->GetStringField(TEXT("name"));
+        Status.Reset();
+        NavigationStatus = TEXT("Recalled ") + ActiveViewName + TEXT(". K saves a new camera after orbiting.");
+    }
+}
+
+void APalladioGameMode::SaveOrbitView()
+{
+    if (bBaseline || bReloadRequired) return;
+    auto* Player = GetWorld()->GetFirstPlayerController();
+    auto* Navigator = Player ? Cast<APalladioNavigator>(Player->GetPawn()) : nullptr;
+    FVector Focus, Eye;
+    double VerticalFov = 45.0;
+    if (!Navigator || !Navigator->CaptureOrbitView(Focus, Eye, VerticalFov))
+    {
+        Status = TEXT("Press 2 for orbit mode before saving a view.");
+        return;
+    }
+    const TArray<TSharedPtr<FJsonValue>>* Views = nullptr;
+    Current->TryGetArrayField(TEXT("views"), Views);
+    FString Name;
+    for (int32 Number = 1; Number <= 25; ++Number)
+    {
+        Name = FString::Printf(TEXT("Unreal view %d"), Number);
+        if (!Views || !Views->ContainsByPredicate([&Name](const auto& Value)
+            { return Value->AsObject()->GetStringField(TEXT("name")).Equals(Name, ESearchCase::IgnoreCase); })) break;
+    }
+    // The shared service validates and converts metre/Y-up poses, with the same
+    // revision conflict handling used for native geometry edits.
+    Request(FString::Printf(
+        TEXT("{\"revision\":%d,\"commands\":[{\"action\":\"view_capture\",\"name\":\"%s\",")
+        TEXT("\"pose\":{\"eye\":[%.10f,%.10f,%.10f],\"target\":[%.10f,%.10f,%.10f],\"fov_degrees\":%.8f}}]}"),
+        Current->GetIntegerField(TEXT("revision")), *Name,
+        Eye.X / 100, Eye.Z / 100, Eye.Y / 100, Focus.X / 100, Focus.Z / 100, Focus.Y / 100, VerticalFov));
+}
+
 void APalladioGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -408,8 +476,19 @@ void APalladioGameMode::Tick(float DeltaSeconds)
     }
     if (Player->WasInputKeyJustPressed(EKeys::B))
     {
+        ActiveView.Reset();
         bBaseline = !bBaseline;
         Display(Current);
+    }
+    if (Player->WasInputKeyJustPressed(EKeys::V))
+    {
+        RecallView(Player->IsInputKeyDown(EKeys::LeftShift) || Player->IsInputKeyDown(EKeys::RightShift) ? -1 : 1);
+        return;
+    }
+    if (Player->WasInputKeyJustPressed(EKeys::K))
+    {
+        SaveOrbitView();
+        return;
     }
     const auto& Elements = Current->GetArrayField(TEXT("elements"));
     if (!bBaseline && !Elements.IsEmpty() && Player->WasInputKeyJustPressed(EKeys::Tab))
@@ -417,6 +496,7 @@ void APalladioGameMode::Tick(float DeltaSeconds)
         const int32 Index = Elements.IndexOfByPredicate([this](const auto& Value)
             { return Value->AsObject()->GetStringField(TEXT("id")) == Selection; });
         Selection = Elements[(Index + 1) % Elements.Num()]->AsObject()->GetStringField(TEXT("id"));
+        ActiveView.Reset();
         Display(Current);
     }
     const double X = double(Player->WasInputKeyJustPressed(EKeys::Right)) - double(Player->WasInputKeyJustPressed(EKeys::Left));
@@ -449,6 +529,7 @@ FString APalladioGameMode::Caption() const
     const auto* Player = GetWorld()->GetFirstPlayerController();
     const auto* Navigator = Player ? Cast<APalladioNavigator>(Player->GetPawn()) : nullptr;
     const FString Mode = Navigator ? Navigator->NavigationLabel() : FString();
+    if (!ActiveView.IsEmpty()) SelectedName += TEXT("  |  From view: ") + ActiveViewName;
     return FString::Printf(TEXT("%s  |  Revision %d  |  %s  |  %s%s\n%s\n%s"),
         *Current->GetStringField(TEXT("name")), Current->GetIntegerField(TEXT("revision")),
         bBaseline ? TEXT("Original site") : TEXT("Design"), *Mode, *SelectedName,
@@ -462,6 +543,8 @@ void APalladioHUD::DrawHUD()
     {
         DrawText(Mode->Caption(), FLinearColor::White, 20, 20, GEngine->GetSmallFont(), 1.3f);
         DrawText(TEXT("1 Fly (WASD, Q/E)   |   2 Orbit (mouse, scroll or W/S)   |   3 Walk (WASD)"),
+            FLinearColor::White, 20, Canvas->ClipY - 75, GEngine->GetSmallFont(), 1.1f);
+        DrawText(TEXT("V Next view   |   Shift+V Previous view   |   K Save orbit camera"),
             FLinearColor::White, 20, Canvas->ClipY - 55, GEngine->GetSmallFont(), 1.1f);
         DrawText(TEXT("Tab Select   |   Arrows Move 0.5 m   |   B Original site   |   R Reload"),
             FLinearColor::White, 20, Canvas->ClipY - 35, GEngine->GetSmallFont(), 1.1f);

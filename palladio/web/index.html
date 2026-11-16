@@ -213,6 +213,51 @@
           </div>
           <p id="asset-status" role="status" class="muted"></p>
         </details>
+        <details id="water-panel" class="stack"><summary>Pools and ponds</summary>
+          <form id="water-form" class="stack">
+            <label>Type<select id="water-kind"><option value="pool">Pool</option><option value="pond">Sloping pond</option></select></label>
+            <label>Name<input id="water-name" value="Garden pool" maxlength="60" required></label>
+            <label>Basin material<select id="water-material"><option value="stone">Stone</option><option value="concrete">Concrete</option></select></label>
+            <label>Width (m)<input id="water-width" type="number" value="6" min="2" max="40" step="any" required></label>
+            <label>Depth along site (m)<input id="water-depth" type="number" value="10" min="2" max="40" step="any" required></label>
+            <label>Basin height (m)<input id="water-height" type="number" value="1.5" min="0.4" max="4" step="any" required></label>
+            <label>Water height above base (m)<input id="water-water_level" type="number" value="1.3" min="0.2" step="any" required></label>
+            <div class="triplet"><label>X<input id="water-x" type="number" value="15" step="any" required></label><label>Base Y<input id="water-y" type="number" value="0" step="any" required></label><label>Z<input id="water-z" type="number" value="0" step="any" required></label></div>
+            <label>Yaw (degrees)<input id="water-yaw" type="number" value="0" min="-360" max="360" step="any" required></label>
+            <button type="submit">Preview new water feature</button>
+            <button id="water-update" type="button">Preview updating selected basin</button>
+          </form>
+          <button id="water-schedule" type="button">Show saved capacities</button><pre id="water-result" class="job-details"></pre>
+          <p class="muted">Static coloured water, no fluid or swimming simulation. Terrain is not excavated automatically. Place the basin above ground or edit terrain manually.</p>
+        </details>
+        <details id="foundation-panel" class="stack"><summary>Raised structures and foundations</summary>
+          <p class="muted">Select a room, garage, connected dwelling or terrace. Supports are independent assemblies fitted to the current terrain; include them with the host in layout sets and refit after moving or terrain edits.</p>
+          <label>Pier columns<input id="foundation-columns_x" type="number" value="3" min="2" max="6"></label>
+          <label>Pier rows<input id="foundation-columns_z" type="number" value="3" min="2" max="6"></label>
+          <label>Pier width (m)<input id="foundation-pier_width" type="number" value="0.25" min="0.15" max="0.6" step="any"></label>
+          <label>Clearance above highest ground (m)<input id="foundation-clearance" type="number" value="1.2" min="0.6" max="10" step="any"></label>
+          <button id="foundation-raise" type="button">Preview raising structure and fitting supports</button>
+          <button id="foundation-fit" type="button">Preview supports at current height</button>
+          <button id="foundation-refit" type="button">Preview refitting selected foundation</button>
+          <p class="muted">Schematic pads, piers and beams. Soil, excavation and structural capacity are not calculated.</p>
+        </details>
+        <details id="wall-tools" class="stack"><summary>Wall openings</summary>
+          <p class="muted">Add a Wall with openings in the assembly builder, then select one of its parts. Rough opening sizes include the frames. Doors remain open.</p>
+          <button id="wall-convert" type="button">Preview converting independent wall</button>
+          <label>Saved opening<select id="opening-list"></select></label>
+          <button id="opening-new" type="button">New opening fields</button>
+          <form id="opening-form" class="stack">
+            <label>Opening key<input id="opening-key" maxlength="24" pattern="[A-Za-z0-9_-]+" required></label>
+            <label>Kind<select id="opening-kind"><option value="window">Window</option><option value="door">Door</option></select></label>
+            <label>Centre along wall (m)<input id="opening-center" type="number" step="any" value="0" required></label>
+            <label>Rough width (m)<input id="opening-width" type="number" step="any" min="0.5" value="1.2" required></label>
+            <label>Rough height (m)<input id="opening-height" type="number" step="any" min="0.5" value="1.2" required></label>
+            <label>Sill height (m)<input id="opening-sill" type="number" step="any" min="0" value="0.9" required></label>
+            <label>Frame width (m)<input id="opening-frame" type="number" step="any" min="0.05" max="0.2" value="0.06" required></label>
+            <button type="submit">Preview opening</button>
+          </form>
+          <button id="opening-remove" type="button">Preview removing opening</button>
+        </details>
         <details id="jobs-panel" class="stack">
           <summary>Design jobs</summary>
           <p class="muted">Keep a brief and ordered steps across sessions. Complete each step with a reviewed property revision and a checkpoint note.</p>
@@ -228,6 +273,7 @@
           <pre id="job-details" class="job-details"></pre>
           <p id="job-agent-status" class="muted" role="status">Uses the provider/model and context filter selected in the agent panel, plus any selected reference image. Each step requires review and Apply. No steps run unattended.</p>
           <button id="job-propose" type="button">Preview current step with agent</button>
+          <button id="job-stop" type="button" disabled>Stop planning</button>
           <button id="job-review" type="button">Review saved step proposal</button>
           <button id="job-start" type="button">Start job</button>
           <button id="job-pause" type="button">Pause job</button>
@@ -240,14 +286,16 @@
           <summary>Views and presentation</summary>
           <label>Saved view<select id="view-list"></select></label>
           <button id="view-open" type="button">Go to view</button>
+          <label>Vertical field of view (degrees)<input id="view-fov" type="number" min="15" max="100" step="1" value="45"></label>
           <label>View name<input id="view-name" value="Main view" maxlength="80"></label>
           <button id="view-save" type="button">Preview saving camera</button>
           <button id="view-update" type="button">Preview replacing camera</button>
           <button id="view-remove" type="button">Preview removing view</button>
+          <p class="muted">In Unreal: V / Shift+V recall saved views; K saves the current orbit camera. Reload here to see cameras saved in Unreal.</p>
           <button id="view-png" type="button">Download viewport PNG</button>
           <label class="checkbox"><input id="view-terrain" type="checkbox" checked>Include terrain in OBJ</label>
           <button id="view-obj" type="button">Export saved geometry OBJ</button>
-          <p class="muted">OBJ contains placed geometry and optional terrain, in metres with Y up. Materials, source vegetation and water are omitted. PNG captures the current viewport, including any preview.</p>
+          <p class="muted">OBJ contains placed geometry, including basin water surfaces, and optional terrain, in metres with Y up. Material appearances, source vegetation and coastal water are omitted. PNG captures the current viewport, including any preview.</p>
           <p id="view-status" class="muted" role="status"></p>
         </details>
         <details id="palette-panel" class="stack">

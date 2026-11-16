@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
+from threading import Event
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
@@ -84,15 +85,33 @@ def main():
             house=library.get(project['id'])['scene']['assemblies'][-1]
             part=next(e for e in library.get(project['id'])['scene']['elements'] if e['id']==next(iter(house['members'].values())))
             page.locator('#scene-items button').filter(has_text=part['name']).first.click()
+            page.locator('#foundation-panel > summary').click();page.locator('#foundation-clearance').fill('1.2')
+            page.locator('#foundation-raise').click();apply()
+            assert any(g['spec']['kind']=='foundation' for g in library.get(project['id'])['scene']['assemblies'])
             page.locator('#assembly-kind').select_option('gable_roof');page.locator('#roof-fit').click();apply()
             page.locator('details:has(#planting-form) > summary').click()
             page.locator('#plant-count').fill('3');page.locator('#plant-x').fill('20');page.locator('#plant-z').fill('15')
             page.locator('#planting-form button[type=submit]').click();apply()
             page.locator('#palette-panel > summary').click();page.locator('#palette-list').select_option('builtin:light-tile')
             page.locator('#palette-apply').click();apply()
+            # Five-PR series: a keyed wall opening and editable non-solid water.
+            page.locator('#assembly-kind').select_option('wall_run');page.locator('#assembly-name').fill('Smoke wall')
+            page.locator('#assembly-form button[type=submit]').click();apply()
+            wall=library.get(project['id'])['scene']['assemblies'][-1]
+            part=next(e for e in library.get(project['id'])['scene']['elements'] if e['id']==next(iter(wall['members'].values())))
+            page.locator('#scene-items button').filter(has_text=part['name']).first.click()
+            page.locator('#wall-tools > summary').click();page.locator('#opening-key').fill('entry')
+            page.locator('#opening-kind').select_option('door');page.locator('#opening-width').fill('1.4');page.locator('#opening-height').fill('2.1')
+            page.locator('#opening-form button[type=submit]').click();apply()
+            expect(page.locator('#opening-list option')).to_have_count(1)
+            page.locator('#water-panel > summary').click();page.locator('#water-name').fill('Smoke pool')
+            page.locator('#water-form button[type=submit]').click();apply();page.locator('#water-schedule').click()
+            expect(page.locator('#water-result')).to_contain_text('Smoke pool')
+            assert any(e.get('collision') is False for e in library.get(project['id'])['scene']['elements'])
             page.locator('#presentation-panel > summary').click();page.locator('#view-name').fill('Arrival')
+            page.locator('#view-fov').fill('60');page.locator('#view-fov').press('Tab')
             page.locator('#view-save').click();apply();expect(page.locator('#view-list option')).to_have_count(1)
-            page.locator('#view-open').click()
+            page.locator('#view-open').click();assert library.get(project['id'])['scene']['views'][0]['camera']['fov_degrees']==60
             with page.expect_download() as image_download:page.locator('#view-png').click()
             image_file=Path(image_download.value.path());assert image_file.read_bytes().startswith(b'\x89PNG');assert image_file.stat().st_size>1000
             with page.expect_download() as obj_download:page.locator('#view-obj').click()
@@ -105,6 +124,17 @@ def main():
             page.locator('#job-start').click();expect(page.locator('#job-propose')).to_be_enabled()
             page.locator('#job-propose').click();expect(page.locator('#proposal-text')).to_contain_text('Design job step');apply()
             expect(page.locator('#job-list option')).to_contain_text('completed')
+            page.locator('#job-title').fill('Stop review');page.locator('#job-steps').fill('set weather to clear')
+            page.locator('#job-form button[type=submit]').click();expect(page.locator('#job-list option')).to_have_count(2)
+            page.locator('#job-start').click();page.locator('#agent-provider').select_option('ollama')
+            fixture.plan={'summary':'Clear weather','commands':[{'action':'environment','environment':{'weather':'clear'}}]}
+            fixture.release=Event();fixture.started.clear()
+            try:
+                page.locator('#job-propose').click();assert fixture.started.wait(3)
+                page.locator('#job-stop').click();expect(page.locator('#job-agent-status')).to_contain_text('Job paused')
+            finally:fixture.release.set()
+            expect(page.locator('#job-resume')).to_be_enabled();expect(page.locator('#proposal')).to_be_hidden()
+            assert library.get(project['id'])['revision']==revision
             page.locator('details:has(#diagnostics-refresh) > summary').click();page.locator('#diagnostics-refresh').click()
             expect(page.locator('#diagnostics-result')).to_contain_text('database schema 2')
             page.reload();expect(page.locator('#project-title')).to_have_text('Browser acceptance')
@@ -114,7 +144,7 @@ def main():
             if os.getenv('PALLADIO_SCREENSHOT'): page.screenshot(path=os.environ['PALLADIO_SCREENSHOT'],full_page=True)
             assert not errors,errors
             browser.close()
-            print('PASS: Chromium terrain, assets, references, rooms, roof, planting, palettes, PNG/OBJ, saved view, model outline, job Apply, diagnostics and reopen; no page errors')
+            print('PASS: Chromium terrain, assets, references, rooms, roof, planting, palettes, PNG/OBJ, saved view, model outline, job Apply/Stop, wall openings, fitted supports, water, FOV, diagnostics and reopen; no page errors')
 
 
 if __name__=='__main__': main()

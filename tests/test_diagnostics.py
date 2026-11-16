@@ -1,3 +1,4 @@
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import json
@@ -23,7 +24,9 @@ class DiagnosticTests(unittest.TestCase):
         library=Library(self.path);project=library.create('Backup','meadow');job=DesignJobs(library).create(project['id'],{'title':'Saved','brief':'Retained intent','steps':['add a room']})
         backup=backup_library(self.path);library.commit(project['id'],1,[{'action':'environment','environment':{'hour':8}}])
         copied=Library(backup);self.assertEqual(copied.get(project['id']),project);self.assertEqual(DesignJobs(copied).get(project['id'],job['id']),job)
-        with sqlite3.connect(self.path) as db:db.executescript('DROP TABLE design_jobs;PRAGMA user_version=1;')
+        # The SQLite transaction context does not close Windows file handles.
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.executescript('DROP TABLE design_jobs;PRAGMA user_version=1;')
         result=json.loads(subprocess.check_output([sys.executable,'-m','palladio.diagnostics','--library',str(self.path),'--backup-before-upgrade'],text=True))
         self.assertEqual(library_info(result['backup'])['schema'],1);self.assertEqual(library_info(self.path)['schema'],1)
         migrated=Library(self.path);self.assertEqual(migrated.get(project['id'])['revision'],2);self.assertEqual(library_info(result['backup'])['schema'],1)

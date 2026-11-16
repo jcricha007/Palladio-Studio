@@ -5,6 +5,7 @@
 #include "CollisionShape.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
+#include "Engine/EngineTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
@@ -39,6 +40,13 @@ APalladioNavigator::APalladioNavigator()
     Camera->SetupAttachment(GetCapsuleComponent());
     Camera->SetRelativeLocation(FVector(0, 0, EyeOffset));
     Camera->bUsePawnControlRotation = true;
+    // FieldOfView is horizontal at the reference aspect ratio. Maintain Y keeps
+    // the browser's vertical framing stable when the native window is resized.
+    Camera->bOverrideAspectRatioAxisConstraint = true;
+    Camera->AspectRatioAxisConstraint = AspectRatio_MaintainYFOV;
+    Camera->SetAspectRatio(16.0f / 9.0f);
+    Camera->SetFieldOfView(FMath::RadiansToDegrees(2.0 * FMath::Atan(
+        FMath::Tan(FMath::DegreesToRadians(VerticalFieldOfView / 2.0)) * Camera->AspectRatio)));
 }
 
 bool APalladioNavigator::TryWalkAt(const FVector& Probe)
@@ -86,9 +94,9 @@ bool APalladioNavigator::SetNavigation(EPalladioNavigation Next)
     if (Next == EPalladioNavigation::Orbit)
     {
         const FVector Offset = OrbitFocus - Camera->GetComponentLocation();
-        OrbitDistance = FMath::Clamp(Offset.Size(), 400.0, 14000.0);
+        OrbitDistance = FMath::Clamp(Offset.Size(), 200.0, 300000.0);
         const FRotator View = Offset.IsNearlyZero() ? FRotator(-25, 35, 0) : Offset.Rotation();
-        UpdateOrbit(FRotator(FMath::Clamp(View.Pitch, -80.0, 25.0), View.Yaw, 0));
+        UpdateOrbit(FRotator(FMath::Clamp(View.Pitch, -89.0, 25.0), View.Yaw, 0));
     }
     return true;
 }
@@ -107,6 +115,35 @@ void APalladioNavigator::UpdateOrbit(const FRotator& Rotation)
     Controller->SetControlRotation(Rotation);
     const FVector CameraLocation = OrbitFocus - Rotation.Vector() * OrbitDistance;
     SetActorLocation(CameraLocation - FVector(0, 0, EyeOffset));
+}
+
+bool APalladioNavigator::RecallSavedView(const FVector& Focus, const FVector& Eye, double VerticalFov)
+{
+    const FVector Offset = Focus - Eye;
+    const double Distance = Offset.Size();
+    if (!Controller || Focus.ContainsNaN() || Eye.ContainsNaN() ||
+        !FMath::IsFinite(VerticalFov) || VerticalFov < 15.0 || VerticalFov > 100.0 ||
+        Distance < 199.99 || Distance > 300000.01)
+    {
+        return false;
+    }
+    SetNavigation(EPalladioNavigation::Orbit);
+    OrbitFocus = Focus;
+    OrbitDistance = Distance;
+    VerticalFieldOfView = VerticalFov;
+    Camera->SetFieldOfView(FMath::RadiansToDegrees(2.0 * FMath::Atan(
+        FMath::Tan(FMath::DegreesToRadians(VerticalFov / 2.0)) * Camera->AspectRatio)));
+    UpdateOrbit(Offset.Rotation());
+    return true;
+}
+
+bool APalladioNavigator::CaptureOrbitView(FVector& Focus, FVector& Eye, double& VerticalFov) const
+{
+    if (Navigation != EPalladioNavigation::Orbit) return false;
+    Focus = OrbitFocus;
+    Eye = Camera->GetComponentLocation();
+    VerticalFov = VerticalFieldOfView;
+    return true;
 }
 
 FString APalladioNavigator::NavigationLabel() const
@@ -133,7 +170,7 @@ void APalladioNavigator::Tick(float DeltaSeconds)
     const bool bOrbit = Navigation == EPalladioNavigation::Orbit;
     FRotator View = GetControlRotation().GetNormalized();
     View.Yaw += MouseX * MouseSensitivity;
-    View.Pitch = FMath::Clamp(View.Pitch + MouseY * MouseSensitivity, -85.0, bOrbit ? 25.0 : 85.0);
+    View.Pitch = FMath::Clamp(View.Pitch + MouseY * MouseSensitivity, bOrbit ? -89.0 : -85.0, bOrbit ? 25.0 : 85.0);
     View.Roll = 0;
 
     if (bOrbit)
@@ -141,7 +178,7 @@ void APalladioNavigator::Tick(float DeltaSeconds)
         const double Scroll = static_cast<double>(Player->WasInputKeyJustPressed(EKeys::MouseScrollDown)) -
             static_cast<double>(Player->WasInputKeyJustPressed(EKeys::MouseScrollUp));
         const double Zoom = KeyAxis(*Player, EKeys::S, EKeys::W) * DeltaSeconds * 1.6 + Scroll * .12;
-        OrbitDistance = FMath::Clamp(OrbitDistance * FMath::Exp(Zoom), 400.0, 14000.0);
+        OrbitDistance = FMath::Clamp(OrbitDistance * FMath::Exp(Zoom), 200.0, 300000.0);
         UpdateOrbit(View);
         return;
     }

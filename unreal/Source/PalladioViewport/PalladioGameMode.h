@@ -30,6 +30,8 @@ private:
     void BuildLandscape(const TSharedPtr<FJsonObject>& View);
     void Display(const TSharedPtr<FJsonObject>& View);
     void MoveSelection(const FVector& DeltaMetres);
+    void RecallView(int32 Direction);
+    void SaveOrbitView();
     void AddShape(UStaticMesh* Mesh, const FVector& Center, const FVector& Dimensions,
         double Yaw, FColor Color, bool bSelected = false, bool bBlocksWalking = false);
     UMaterialInstanceDynamic* Tint(FColor Color);
@@ -53,6 +55,8 @@ private:
     FString Status = TEXT("Loading property...");
     FString Selection;
     FString NavigationStatus;
+    FString ActiveView;
+    FString ActiveViewName;
     TSharedPtr<FJsonObject> Current;
     bool bBusy = false;
     bool bBaseline = false;

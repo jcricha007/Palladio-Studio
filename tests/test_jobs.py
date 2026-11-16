@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import sqlite3
@@ -46,9 +47,12 @@ class JobTests(unittest.TestCase):
         with self.assertRaises(ValidationError):self.change('revise',title='x',brief='x',steps=['x'])
         self.change('cancel');self.assertEqual(self.job['status'],'cancelled')
     def test_schema_one_migrates_without_changing_property_or_history(self):
-        with sqlite3.connect(self.path) as db:db.executescript('DROP TABLE design_jobs;PRAGMA user_version=1;')
+        # Commit/rollback and file-handle lifetime are separate in sqlite3.
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.executescript('DROP TABLE design_jobs;PRAGMA user_version=1;')
         reopened=Library(self.path);self.assertEqual(reopened.get(self.p['id']),self.p);self.assertEqual(DesignJobs(reopened).list(self.p['id']),[])
-        with sqlite3.connect(self.path) as db:self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],2)
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],2)
     def test_http_job_lifecycle_and_stale_conflict(self):
         with running_server(handler_for(self.library)) as server:
             url=f'http://127.0.0.1:{server.server_port}/api/properties/{self.p["id"]}/jobs';read=test_unreal.UnrealBridgeTest.read

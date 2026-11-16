@@ -1,6 +1,6 @@
 """Persistent, ordered design briefs with optimistic versions and explicit checkpoints."""
 import json
-from uuid import uuid4
+from uuid import UUID,uuid4
 from .scene import ValidationError,required_text
 from .store import MissingProject,RevisionConflict,timestamp
 
@@ -14,6 +14,15 @@ def outline(data):
 
 def current_step(job):
     return next((step for step in job['steps'] if step['status']=='pending'),None)
+
+
+def request_identity(data,step):
+    key=data.get('request_id')
+    if key is None:return None
+    try:
+        if not isinstance(key,str) or str(UUID(key))!=key:raise ValueError()
+    except (ValueError,TypeError,AttributeError):raise ValidationError('Use a unique planning request ID.')
+    return {'id':key,'version':data.get('version'),'step_id':step['id']}
 
 
 class DesignJobs:
@@ -70,6 +79,21 @@ class DesignJobs:
                 job.pop('proposal',None)
                 if current_step(job) is None:job['status']='completed'
             else:raise ValidationError('Choose a supported job operation.')
+            job.pop('last_plan_request',None)
+            return self.save(connection,job)
+
+    def stop_planning(self,project_id,job_id,data):
+        # A stop may arrive before inference starts or immediately after its proposal
+        # saves. Match that exact request; never pause a later step/session.
+        with self.library.connect(write=True) as connection:
+            job=self.read(connection,project_id,job_id);step=current_step(job)
+            if job['status']!='active' or step is None or data.get('step_id')!=step['id']:
+                raise RevisionConflict('This job moved on. Refresh jobs before pausing it.')
+            request=request_identity(data,step);version=data.get('version')
+            if request is None or type(version) is not int or version<1:raise ValidationError('Provide the planning request ID and starting job version.')
+            if job['version']!=version and not (job['version']==version+1 and job.get('last_plan_request')==request):
+                raise RevisionConflict('This job changed outside that planning request. Refresh jobs before pausing it.')
+            job['status']='paused';job.pop('proposal',None);job.pop('last_plan_request',None)
             return self.save(connection,job)
 
     def propose(self,project_id,job_id,data,agent):
@@ -77,7 +101,7 @@ class DesignJobs:
         if job['status']!='active':raise ValidationError('Start or resume this job before previewing a step.')
         project=self.library.get(project_id)
         if type(data.get('revision')) is not int or data['revision']!=project['revision']:raise RevisionConflict('Reload the property before planning this step.')
-        step=current_step(job);provider=data.get('provider','rules');context=None
+        step=current_step(job);request=request_identity(data,step);provider=data.get('provider','rules');context=None
         if provider=='ollama':
             required_text(job['brief'],'Brief for local planning',16000)
             index=job['steps'].index(step)
@@ -90,10 +114,14 @@ class DesignJobs:
         with self.library.connect(write=True) as connection:
             latest=self.read(connection,project_id,job_id);self.check_version(latest,job['version'])
             if self.library._read(connection,project_id)['revision']!=project['revision']:raise RevisionConflict('The property changed while this step was planned. Preview again.')
+            changed=False
             if plan['commands']:
                 latest['proposal']={k:v for k,v in plan.items() if k not in ('scene','command','elements')}
-                latest=self.save(connection,latest)
-            elif latest.pop('proposal',None) is not None:latest=self.save(connection,latest)
+                changed=True
+            elif latest.pop('proposal',None) is not None:changed=True
+            if request is not None:latest['last_plan_request']=request;changed=True
+            elif latest.pop('last_plan_request',None) is not None:changed=True
+            if changed:latest=self.save(connection,latest)
             return {'job':latest,'plan':{**plan,'job':{'id':latest['id'],'version':latest['version']}}}
 
     def review(self,project_id,job_id,data):
@@ -115,9 +143,10 @@ class DesignJobs:
             project=self.library._commit(connection,project_id,proposal['revision'],proposal['commands'])
             current_step(job).update(status='complete',revision=project['revision'],note=proposal['summary'],method='agent',completed=timestamp())
             job.pop('proposal');job['status']='active' if current_step(job) else 'completed'
+            job.pop('last_plan_request',None)
             return {'project':project,'job':self.save(connection,job)}
 
     def discard(self,project_id,job_id,data):
         with self.library.connect(write=True) as connection:
             job=self.read(connection,project_id,job_id);self.check_version(job,data.get('version'))
-            job.pop('proposal',None);return self.save(connection,job)
+            job.pop('proposal',None);job.pop('last_plan_request',None);return self.save(connection,job)

@@ -1,7 +1,9 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const {readStudio}=require('./helpers/studio-source.cjs');
 // DOM/fetch doubles exercise async UI state, not WebGL or model quality.
+const root=process.argv[2] || process.cwd();
 const nodes = new Map();
 class Node {
   constructor(id='') { Object.assign(this, {id, value:'', hidden:false, disabled:false, dataset:{}, children:[], events:{}, classList:{toggle(){}}}); }
@@ -13,7 +15,7 @@ class Node {
   get valueAsNumber() { return Number(this.value); }
 }
 const node = id => nodes.get(id) || (nodes.set(id,new Node(id)), nodes.get(id));
-for(const m of fs.readFileSync('palladio/web/index.html','utf8').matchAll(/id="([^"]+)"/g)) node(m[1]);
+for(const m of fs.readFileSync(root+'/palladio/web/index.html','utf8').matchAll(/id="([^"]+)"/g)) node(m[1]);
 const storage = new Map();
 const updates = [];
 let requests = [], responder;
@@ -26,11 +28,11 @@ const context = vm.createContext({
   Viewport:class {reset(){} update(...args){updates.push(args)}},
   fetch:async(path,options)=>{requests.push({path,options});return responder(path,options)},
 });
-let source=fs.readFileSync('palladio/web/studio.js','utf8').replace(/^import .+;$/gm,'');
-source=source.slice(0,source.lastIndexOf('\nrender();\nrun(async'));
-vm.runInContext(fs.readFileSync('palladio/web/site-picker.js','utf8')
+const source=readStudio(root);
+vm.runInContext(fs.readFileSync(root+'/palladio/web/site-picker.js','utf8')
   .replace(/^import .+;$/gm,'').replace('export class SitePicker','class SitePicker'),context);
 vm.runInContext(source,context);
+assert.equal(requests.length,0,'Loading the UI test harness must not run application startup requests.');
 const evaluate=s=>vm.runInContext(s,context);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const emit=(id,event='click')=>node(id).events[event].forEach(fn=>fn({preventDefault(){}}));

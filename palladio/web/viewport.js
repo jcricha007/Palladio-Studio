@@ -11,7 +11,6 @@ const rotate = ([x, y, z], angle) => [
   x * Math.cos(angle) + z * Math.sin(angle), y, -x * Math.sin(angle) + z * Math.cos(angle),
 ];
 const sun = normalize([-.4, .9, .6]);
-const fieldOfView = Math.tan(Math.PI / 8);
 
 const vertex = `
   attribute vec3 point;
@@ -213,6 +212,13 @@ export class Viewport {
 
   captureCamera() {return {...this.camera,target:[...this.camera.target]};}
 
+  projectionScale() {return Math.tan((this.camera.fov_degrees ?? 45)*Math.PI/360);}
+
+  setFieldOfView(value) {
+    if(!Number.isFinite(value)||value<15||value>100)throw new Error('Choose a vertical field of view from 15 to 100 degrees.');
+    this.camera.fov_degrees=value;this.draw();
+  }
+
   applyCamera(camera) {
     this.camera={...camera,target:[...camera.target]};
     this.maxDistance=Math.max(this.maxDistance||170,camera.distance);this.draw();
@@ -224,8 +230,7 @@ export class Viewport {
   }
 
   reset() {
-    Object.assign(this.camera, this.defaultCamera || {target: [0, 1, 0], azimuth: .68, pitch: .43, distance: 33});
-    this.draw();
+    this.applyCamera(this.defaultCamera || {target: [0, 1, 0], azimuth: .68, pitch: .43, distance: 33});
   }
 
   basis() {
@@ -239,6 +244,7 @@ export class Viewport {
   }
 
   pick(x, y) {
+    const fieldOfView = this.projectionScale();
     const rect = this.canvas.getBoundingClientRect();
     const {eye, right, up, forward} = this.basis();
     const u = (2 * (x - rect.left) / rect.width - 1) * fieldOfView * rect.width / rect.height;
@@ -298,6 +304,7 @@ export class Viewport {
 
   draw() {
     if (!this.count) return;
+    const fieldOfView = this.projectionScale();
     const {canvas, gl, uniforms} = this;
     const ratio = Math.min(2, window.devicePixelRatio || 1);
     const width = Math.max(1, Math.round(canvas.clientWidth * ratio));
