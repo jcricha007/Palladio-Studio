@@ -55,6 +55,16 @@ are omitted from the textual schema description while remaining constrained in t
 actual output grammar. Model memory and latency at this setting still require a live
 workstation check; models unload after each response as before.
 
+A completed reply containing malformed JSON gets one format-repair attempt against
+the same scene, schema and original request. The repaired proposal still goes through
+all geometry and context validators. Duplicate JSON keys and nonfinite numbers remain
+invalid. Timeouts, remote replies, protocol failures and truncated responses are not
+retried. Local weights are checked again before repair; pausing a job still rejects
+its late reply. Wrong but valid design proposals are not silently rewritten.
+
+When defaults are requested, the model is instructed to omit optional parameters.
+The context includes planting and building-tool defaults, alongside catalog dimensions.
+
 ## Validation
 
 Run the normal suite with `scripts/Validate-Palladio.ps1`. The added tests exercise
@@ -75,3 +85,9 @@ It never opens the user's property database. Each case reports its own failure; 
 JSON response that makes the wrong design or extra edits is a failure. The report is
 `.palladio/checks/local-model-design.json`. These three prompts are a focused acceptance
 check, not a claim that arbitrary architectural briefs will succeed.
+
+On failure, the report retains returned commands and up to eight field differences
+with expected/actual values. JSON failures include parser position and bounded model
+response excerpts (at most 6,000 characters per attempt). Recovered JSON attempts are
+also recorded. This capture is enabled only for these disposable checks; normal app
+requests do not retain response text, and private reasoning is never captured.

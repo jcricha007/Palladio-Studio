@@ -43,12 +43,43 @@ def design_signature(scene):
     return result
 
 
+def scene_differences(expected, actual, limit=8):
+    """Bounded, field-level evidence; keep acceptance strict instead of hiding drift."""
+    differences = []
+    def brief(value):
+        if isinstance(value, str) and len(value) > 160: return value[:160] + '...'
+        if isinstance(value, (list, dict)) and len(value) > 8:
+            return {'type': type(value).__name__, 'length': len(value)}
+        return value
+    def compare(left, right, path):
+        if len(differences) >= limit or left == right: return
+        if isinstance(left, dict) and isinstance(right, dict):
+            for key in sorted(left.keys() | right.keys()):
+                if len(differences) >= limit: break
+                if key not in left or key not in right:
+                    differences.append({'path': path + '.' + key,
+                                        'expected': brief(left.get(key, '<missing>')),
+                                        'actual': brief(right.get(key, '<missing>'))})
+                else: compare(left[key], right[key], path + '.' + key)
+        elif isinstance(left, list) and isinstance(right, list):
+            if len(left) != len(right):
+                differences.append({'path': path + '.length', 'expected': len(left), 'actual': len(right)})
+            for index, (a, b) in enumerate(zip(left, right)):
+                if len(differences) >= limit: break
+                compare(a, b, f'{path}[{index}]')
+        else: differences.append({'path': path, 'expected': brief(left), 'actual': brief(right)})
+    compare(design_signature(expected), design_signature(actual), 'scene')
+    return differences
+
+
 def check_design(model, port):
-    service = AgentService(OllamaPlanner(port=port))
+    responses = []
+    service = AgentService(OllamaPlanner(port=port, diagnostics=responses))
     reports = []
     with TemporaryDirectory(prefix='palladio-design-model-') as folder:
         library = Library(Path(folder) / 'check.sqlite3')
         for case in ('garage-window', 'complete-building', 'planting'):
+            responses.clear()
             project = library.create(case, 'open meadow')
             selection = None
             if case == 'garage-window':
@@ -80,16 +111,23 @@ def check_design(model, port):
                                         {e['id'] for e in project['scene']['elements']},
                                         {g['id'] for g in project['scene'].get('assemblies', [])})
                 result = service.preview(project, prompt, selection, provider='ollama', model=model, revision=project['revision'])
+                report['commands'] = result['commands']
                 if library.get(project['id']) != project:
                     raise RuntimeError('Preview unexpectedly changed the disposable property.')
+                report['preview_unchanged'] = True
                 if design_signature(result['scene']) != design_signature(target['scene']):
+                    report['differences'] = scene_differences(target['scene'], result['scene'])
                     raise RuntimeError('The valid proposal did not match the requested design, or changed extra properties.')
                 saved = library.commit(project['id'], result['revision'], result['commands'])
                 if design_signature(saved['scene']) != design_signature(result['scene']):
+                    report['differences'] = scene_differences(result['scene'], saved['scene'])
                     raise RuntimeError('Applied geometry differs from the preview.')
                 report.update(passed=True, commands=result['commands'], preview_unchanged=True, apply_matches=True)
             except Exception as error:
                 report['error'] = str(error)
+                if getattr(error, 'diagnostics', None): report['error_details'] = error.diagnostics
+            if responses and (not report['passed'] or len(responses) > 1):
+                report['model_responses'] = deepcopy(responses)
             report['elapsed_seconds'] = round(time.perf_counter() - started, 2)
             reports.append(report)
     return {'passed': all(r['passed'] for r in reports), 'model': model, 'endpoint': f'127.0.0.1:{port}',
