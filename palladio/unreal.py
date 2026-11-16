@@ -44,6 +44,7 @@ def unreal_view(project):
         elements.append({
             "id": element["id"],
             "name": element["name"],
+            **({"collision":element["collision"]} if "collision" in element else {}),
             **({'edit_id': group['id'], 'edit_action': 'assembly_update',
                 'edit_position': group['spec']['position']} if group else {}),
             "center_cm": center,

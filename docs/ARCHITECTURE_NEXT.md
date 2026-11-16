@@ -8,7 +8,7 @@ are reported separately. Merge status is not evidence of native rendering or mod
 | --- | --- | --- |
 | 1 | Editable wall runs and multiple framed openings | Implemented in this increment |
 | 2 | Foundations fitted beneath raised structures | Implemented |
-| 3 | Pool and pond layouts with non-solid water | Next |
+| 3 | Pool and pond layouts with non-solid water | Implemented |
 | 4 | Shared saved views and native recall | Next |
 | 5 | Agent tools, cancellable job planning and acceptance scene | Next |
 
@@ -38,3 +38,16 @@ pad bases. Stable grid roles retain compatible finishes and identities.
 Supports are independent from the host. Move/copy them together using layout sets; refit
 supports afterward. Changing terrain does not silently move the building. These schematic
 pads, piers and beams do not determine excavation, soils, load paths or member capacity.
+
+## Pool and pond layouts
+
+Create rectangular pools with walls/coping or 32-sided elliptical ponds with sloping banks.
+Edit basin dimensions and water level; capacity uses the same inner geometry, reporting
+surface area, depth and litres. Water surface IDs remain stable through edits. Property
+snapshots preserve geometry and collision flags. Native water surfaces use no collision;
+solid basin beds and walls retain it. Capturing a mixed solid/water group as one mesh is
+rejected; detached non-solid water captures preserve their collision setting.
+
+Water is static opaque colour, without refraction, waves, fluid physics or swimming. Basins
+do not cut the terrain: raise them above it or edit terrain explicitly. Capacity is geometric,
+not surveyed storage or hydraulic analysis. Rendered/native collision acceptance is pending.

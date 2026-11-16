@@ -201,7 +201,9 @@ void APalladioGameMode::AddMesh(const TSharedPtr<FJsonObject>& Element, bool bSe
     auto* Mesh = NewObject<UProceduralMeshComponent>(Actor);
     Mesh->SetMobility(EComponentMobility::Movable);
     Actor->SetRootComponent(Mesh);
-    Mesh->SetCollisionProfileName(TEXT("BlockAll"));
+    bool bBlocksWalking = true;
+    Element->TryGetBoolField(TEXT("collision"), bBlocksWalking);
+    Mesh->SetCollisionProfileName(bBlocksWalking ? TEXT("BlockAll") : TEXT("NoCollision"));
     Mesh->bUseComplexAsSimpleCollision = true;
     Mesh->RegisterComponent();
     // A plain AActor has no root when spawned; set its transform after attaching one.
@@ -228,7 +230,7 @@ void APalladioGameMode::AddMesh(const TSharedPtr<FJsonObject>& Element, bool bSe
         }
         for (FVector& Normal : Normals) Normal.Normalize();
         Mesh->CreateMeshSection_LinearColor(SectionIndex, Vertices, Indices, Normals,
-            TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), true);
+            TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), bBlocksWalking);
         Mesh->SetMaterial(SectionIndex, Tint(bSelected ? FColor::FromHex(TEXT("F0BC6A")) : FColor::FromHex(Section->GetStringField(TEXT("color")))));
         ++SectionIndex;
     }
@@ -306,11 +308,13 @@ void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
         {
             const auto& Element = Value->AsObject();
             const FVector Center = VectorField(Element, TEXT("center_cm"));
+            bool bBlocksWalking = true;
+            Element->TryGetBoolField(TEXT("collision"), bBlocksWalking);
             const bool bSelected = Element->GetStringField(TEXT("id")) == Selection;
             if (Element->HasTypedField<EJson::Array>(TEXT("mesh_sections"))) AddMesh(Element, bSelected);
             else AddShape(Cube, Center, VectorField(Element, TEXT("dimensions_cm")),
                 Element->GetNumberField(TEXT("yaw_degrees")), FColor::FromHex(Element->GetStringField(TEXT("color"))),
-                bSelected, true);
+                bSelected, bBlocksWalking);
             if (bSelected)
             {
                 Focus = Center;

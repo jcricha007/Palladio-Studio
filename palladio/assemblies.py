@@ -45,10 +45,15 @@ ASSEMBLIES['foundation']={'label':'Pad-and-pier foundation','width':6,'depth':5,
     'limits':{'width':[2,60],'depth':[2,60],'height':[.6,12]}}
 
 
+for _kind,_label in [('pool','Swimming pool'),('pond','Sloping pond')]:
+    ASSEMBLIES[_kind]={'label':_label,'width':6,'depth':10,'height':1.5,'material':'stone',
+        'limits':{'width':[2,40],'depth':[2,40],'height':[.4,4]}}
+
+
 def generate_assembly(data):
     if not isinstance(data, dict) or not data.keys() <= {
         "kind", "name", "width", "depth", "height", "position", "yaw", "material",
-        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang", "rooms_x", "rooms_z", "openings", "wall_finish", "columns_x", "columns_z", "pier_width", "support_offsets"
+        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang", "rooms_x", "rooms_z", "openings", "wall_finish", "columns_x", "columns_z", "pier_width", "support_offsets", "water_level"
     }:
         raise ValidationError("Choose supported assembly fields.")
     kind = data.get("kind")
@@ -67,6 +72,11 @@ def generate_assembly(data):
         "yaw": number(data.get("yaw", 0), "Assembly rotation", -360, 360),
         "material": data.get("material", defaults["material"]),
     }
+    if kind in ('pool','pond'):
+        if set(data)-{'kind','name','width','height','depth','position','yaw','material','water_level'}:raise ValidationError('Choose pool/pond dimensions and water level.')
+        from .water import water_parts
+        return water_parts(spec,data)
+    if 'water_level' in data:raise ValidationError('Water level applies to pools and ponds.')
     foundation_fields={'columns_x','columns_z','pier_width','support_offsets'}
     if kind=='foundation':
         if set(data)-{'kind','name','width','height','depth','position','yaw','material'}-foundation_fields:raise ValidationError('Choose foundation parameters.')

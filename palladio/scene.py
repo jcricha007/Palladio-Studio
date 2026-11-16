@@ -7,6 +7,7 @@ import re
 from uuid import uuid4
 
 MATERIALS = {
+    "water": "#397c98",
     "concrete": "#b0a598",
     "oak": "#b78554",
     "charred timber": "#3a3632",
@@ -119,6 +120,9 @@ def element(data):
         "size": vector(data.get("size"), "Size (m)", 0.05, 300),
         "yaw": number(data.get("yaw", 0), "Rotation (degrees)", -360, 360),
     }
+    if 'collision' in data:
+        if type(data['collision']) is not bool:raise ValidationError('Collision must be true or false.')
+        result['collision']=data['collision']
     if 'mesh' in data:
         from .geometry import mesh
         result['mesh'] = mesh(data['mesh'])

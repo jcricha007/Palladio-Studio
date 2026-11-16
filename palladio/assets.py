@@ -38,9 +38,11 @@ def import_obj(text, units):
 
 class AssetStore:
     def __init__(self,directory): self.path=Path(directory)
-    def save(self,name,size,model,source):
+    def save(self,name,size,model,source,collision=True):
+        if type(collision) is not bool:raise ValidationError("Asset collision must be true or false.")
         packet={'version':1,'name':required_text(name,'Asset name',80),'size':vector(size,'Asset size',.05,300),
                 'mesh':mesh(model),'source':required_text(source,'Asset source',400)}
+        if not collision:packet['collision']=False
         raw=json.dumps(packet,sort_keys=True,separators=(',',':'),allow_nan=False)
         key=hashlib.sha256(raw.encode()).hexdigest()
         self.path.mkdir(parents=True,exist_ok=True)
@@ -57,6 +59,7 @@ class AssetStore:
             data=json.loads(raw)
             if data['version']!=1: raise ValueError()
             mesh(data['mesh']);vector(data['size'],'Asset size',.05,300)
+            if 'collision' in data and type(data['collision']) is not bool:raise ValueError()
             return {**data,'id':key}
         except (OSError,ValueError,KeyError,TypeError) as error: raise ValidationError('Asset is missing or damaged. Import it again.') from error
     def list(self):
@@ -75,13 +78,15 @@ class AssetStore:
             try: packet=json.loads(required_text(data,'Asset packet',900000))
             except (ValueError,RecursionError) as error: raise ValidationError('Invalid asset JSON.') from error
             if not isinstance(packet,dict) or packet.get('version')!=1: raise ValidationError('Use a version 1 Palladio asset packet.')
-            return self.save(name,packet.get('size'),packet.get('mesh'),packet.get('source','Imported Palladio asset'))
+            return self.save(name,packet.get('size'),packet.get('mesh'),packet.get('source','Imported Palladio asset'),packet.get('collision',True))
         raise ValidationError('Choose OBJ or Palladio asset JSON.')
     def capture(self,project,selection,name):
         target=next((e for e in project['scene']['elements'] if e['id']==selection),None)
         if target is None: raise ValidationError('Select a scene element to capture.')
         group=owner(project['scene'],selection)
         parts=[e for e in project['scene']['elements'] if not group and e['id']==selection or group and e['id'] in group['members'].values()]
+        collisions={part.get('collision',True) for part in parts}
+        if len(collisions)>1:raise ValidationError('This assembly mixes solid parts and non-solid water. Export the property, or detach and capture separate parts.')
         vertices=[];triangles=[];colors=[];indices={}
         for part in parts:
             for points,tint in surface_triangles(part):
@@ -92,8 +97,8 @@ class AssetStore:
                 colors.append(tint)
                 if len(triangles)>MAX_TRIANGLES*3 or len(vertices)>MAX_VERTICES: raise ValidationError('This selection is too detailed to capture as one asset.')
         size,model=normalize(vertices,triangles,colors)
-        return self.save(name,size,model,'Captured from '+project['name']+' revision '+str(project['revision']))
+        return self.save(name,size,model,'Captured from '+project['name']+' revision '+str(project['revision']),next(iter(collisions)))
     def element(self,key,position,yaw=0):
         item=self.get(key)
         return {'kind':'block','name':item['name'],'material':'concrete','position':vector(position,'Asset position',-1000,1000),
-                'yaw':number(yaw,'Asset rotation',-360,360),'size':item['size'],'mesh':item['mesh']}
+                'yaw':number(yaw,'Asset rotation',-360,360),'size':item['size'],'mesh':item['mesh'],**({'collision':False} if item.get('collision') is False else {})}

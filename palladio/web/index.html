@@ -213,6 +213,23 @@
           </div>
           <p id="asset-status" role="status" class="muted"></p>
         </details>
+        <details id="water-panel" class="stack"><summary>Pools and ponds</summary>
+          <form id="water-form" class="stack">
+            <label>Type<select id="water-kind"><option value="pool">Pool</option><option value="pond">Sloping pond</option></select></label>
+            <label>Name<input id="water-name" value="Garden pool" maxlength="60" required></label>
+            <label>Basin material<select id="water-material"><option value="stone">Stone</option><option value="concrete">Concrete</option></select></label>
+            <label>Width (m)<input id="water-width" type="number" value="6" min="2" max="40" step="any" required></label>
+            <label>Depth along site (m)<input id="water-depth" type="number" value="10" min="2" max="40" step="any" required></label>
+            <label>Basin height (m)<input id="water-height" type="number" value="1.5" min="0.4" max="4" step="any" required></label>
+            <label>Water height above base (m)<input id="water-water_level" type="number" value="1.3" min="0.2" step="any" required></label>
+            <div class="triplet"><label>X<input id="water-x" type="number" value="15" step="any" required></label><label>Base Y<input id="water-y" type="number" value="0" step="any" required></label><label>Z<input id="water-z" type="number" value="0" step="any" required></label></div>
+            <label>Yaw (degrees)<input id="water-yaw" type="number" value="0" min="-360" max="360" step="any" required></label>
+            <button type="submit">Preview new water feature</button>
+            <button id="water-update" type="button">Preview updating selected basin</button>
+          </form>
+          <button id="water-schedule" type="button">Show saved capacities</button><pre id="water-result" class="job-details"></pre>
+          <p class="muted">Static coloured water, no fluid or swimming simulation. Terrain is not excavated automatically. Place the basin above ground or edit terrain manually.</p>
+        </details>
         <details id="foundation-panel" class="stack"><summary>Raised structures and foundations</summary>
           <p class="muted">Select a room, garage, connected dwelling or terrace. Supports are independent assemblies fitted to the current terrain; include them with the host in layout sets and refit after moving or terrain edits.</p>
           <label>Pier columns<input id="foundation-columns_x" type="number" value="3" min="2" max="6"></label>

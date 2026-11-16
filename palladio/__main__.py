@@ -35,6 +35,7 @@ STATIC = {
     "/layout.js": ("layout.js", "text/javascript"),
     "/roofs.js": ("roofs.js", "text/javascript"),
     "/rooms.js": ("rooms.js", "text/javascript"),
+    "/water.js": ("water.js", "text/javascript"),
     "/foundations.js": ("foundations.js", "text/javascript"),
     "/walls.js": ("walls.js", "text/javascript"),
     "/diagnostics.js": ("diagnostics.js", "text/javascript"),
@@ -46,7 +47,7 @@ STATIC = {
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
 }
-PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(geometry-export|schedule|measure|export|duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
+PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(water-schedule|geometry-export|schedule|measure|export|duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
 
 
 JOB_ROUTE=re.compile(r"/api/properties/([a-f0-9-]{36})/jobs(?:/([a-f0-9-]{36}))?")
@@ -116,9 +117,13 @@ def handler_for(library, agent=None, sites=None):
                 except MissingProject as error:self.json_response(404,{'error':str(error)})
                 return
             match = PROPERTY_ROUTE.fullmatch(path)
-            if match and match[2] in (None, "unreal", "export", "schedule"):
+            if match and match[2] in (None, "unreal", "export", "schedule", "water-schedule"):
                 try:
                     project = library.get(match[1])
+                    if match[2]=='water-schedule':
+                        from .water import capacity,KINDS
+                        self.json_response(200,{'revision':project['revision'],'features':[{'id':g['id'],'name':g['spec']['name'],**capacity(g['spec'])} for g in project['scene'].get('assemblies',[]) if g['spec']['kind'] in KINDS]})
+                        return
                     if match[2]=='schedule':
                         from .rooms import room_schedule
                         self.json_response(200,{'revision':project['revision'],'buildings':[{'id':g['id'],'name':g['spec']['name'],'rooms':room_schedule(g['spec'])} for g in project['scene'].get('assemblies',[]) if g['spec']['kind']=='dwelling']})
