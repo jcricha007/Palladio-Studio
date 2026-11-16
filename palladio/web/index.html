@@ -64,6 +64,15 @@
         </div>
         <p id="agent-privacy" class="muted" hidden>Preview sends your prompt, scene excerpt and explicitly selected reference image to Ollama on this computer. A reference needs a vision-capable local model. No model downloads or remote services are started.</p>
         <label>Context filter (optional name/type)<input id="agent-query" maxlength="160" placeholder="e.g. garage — selection is always included"></label>
+        <p class="muted">Local Ollama can design buildings, fit roofs and supports, arrange objects, plant trees, edit terrain, apply finishes and save camera views. Select an object or filter by name to focus an edit. Larger designs can use reviewed steps in Build &gt; Design jobs.</p>
+        <details><summary>Example design prompts</summary>
+          <ul class="muted">
+            <li>Create an 8 m by 6 m garage at the centre of the site with a gable roof.</li>
+            <li>Apply limestone to every part of the selected assembly.</li>
+            <li>Plant 12 pine trees within 8 m of X 20, Z 15, then set the time to 17:00.</li>
+            <li>Save an approach view looking at the selected building.</li>
+          </ul>
+        </details>
         </details>
         <p id="agent-status" class="muted" role="status" aria-live="polite">Built-in commands use no language model.</p>
         <form id="prompt-form">

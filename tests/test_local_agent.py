@@ -185,7 +185,7 @@ class AgentTests(unittest.TestCase):
             self.assertEqual(requests[0]['keep_alive'], 0)
             self.assertFalse(requests[0]['stream'])
             self.assertIn('commands', requests[0]['format']['properties'])
-            self.assertEqual(requests[0]['options']['num_ctx'], 16384)
+            self.assertEqual(requests[0]['options']['num_ctx'], 32768)
             self.assertNotIn('tools', requests[0])  # bounded JSON plan, not an unconstrained tool loop
             self.assertNotIn('baseline', json.loads(requests[0]['messages'][1]['content'])['scene_context'])
 

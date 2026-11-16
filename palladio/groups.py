@@ -6,6 +6,9 @@ from .scene import ValidationError, element
 from .placement import place_spec
 
 
+MEMBER_EDIT_FIELDS = frozenset(('name', 'material', 'finish'))
+
+
 def owner(scene, member_id):
     return next((g for g in scene.get('assemblies', []) if member_id in g['members'].values()), None)
 
@@ -88,7 +91,7 @@ def edit_group(scene, command, baseline):
 def member_edit(scene, target, changes=None):
     group = owner(scene, target['id'])
     if not group: return
-    if changes is None or not changes.keys() <= {'name', 'material', 'finish'}:
+    if changes is None or not changes.keys() <= MEMBER_EDIT_FIELDS:
         raise ValidationError('This part belongs to an assembly. Edit the group, or detach it before editing individual geometry.')
     if not changes: return
     role = next(role for role,key in group['members'].items() if key == target['id'])
