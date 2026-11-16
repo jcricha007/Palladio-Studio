@@ -12,6 +12,7 @@
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
 #include "Engine/ExponentialHeightFog.h"
+#include "Engine/PostProcessVolume.h"
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
@@ -100,6 +101,18 @@ void APalladioGameMode::StartPlay()
     Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
     Sky->GetLightComponent()->SetRealTimeCaptureEnabled(true);
     Fog = GetWorld()->SpawnActor<AExponentialHeightFog>();
+    Fog->GetComponent()->SetVolumetricFog(true);
+    auto* Post = GetWorld()->SpawnActor<APostProcessVolume>();
+    Post->bUnbound = true;
+    // Lux-scale sunlight needs bounded eye adaptation in both interiors and sky.
+    Post->Settings.bOverride_AutoExposureMethod = true;
+    Post->Settings.AutoExposureMethod = AEM_Histogram;
+    Post->Settings.bOverride_AutoExposureMinBrightness = true;
+    Post->Settings.AutoExposureMinBrightness = -4.0f;
+    Post->Settings.bOverride_AutoExposureMaxBrightness = true;
+    Post->Settings.AutoExposureMaxBrightness = 16.0f;
+    Post->Settings.bOverride_BloomIntensity = true;
+    Post->Settings.BloomIntensity = 0.15f;
     Request();
 }
 
@@ -341,7 +354,9 @@ void APalladioGameMode::Display(const TSharedPtr<FJsonObject>& View)
     const FString Weather = Environment->GetStringField(TEXT("weather"));
     const double Daylight = FMath::Sin((Hour - 6.0) * UE_PI / 12.0);
     Sun->SetActorRotation(FRotator(-65.0 * Daylight, (Hour - 12.0) * 15.0, 0));
-    Sun->GetLightComponent()->SetIntensity(FMath::Max(0.0, Daylight) * (Weather == TEXT("clear") ? 4.0 : 1.6));
+    Sun->GetLightComponent()->SetIntensity(FMath::Max(0.0, Daylight) * (Weather == TEXT("clear") ? 80000.0 : 18000.0));
+    const float Warmth = FMath::Pow(1.0f - FMath::Max(0.0f, static_cast<float>(Daylight)), 3.0f);
+    Sun->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.98f - 0.28f * Warmth, 0.93f - 0.43f * Warmth));
     Fog->GetComponent()->SetFogDensity(Weather == TEXT("fog") ? .075f : Weather == TEXT("rain") ? .025f : .008f);
 }
 

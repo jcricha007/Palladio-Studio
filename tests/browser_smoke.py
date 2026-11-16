@@ -39,6 +39,18 @@ def main():
             page.goto(f'http://127.0.0.1:{app.server_port}')
             expect(page.locator('#project-title')).to_have_text('Browser acceptance')
             expect(page.locator('#view')).to_be_visible()
+            for quality in ['draft','studio','presentation']:
+                page.locator('#render-quality').select_option(quality)
+                result=page.evaluate('''() => {
+                    document.getElementById('render-quality').dispatchEvent(new Event('change'));
+                    const gl=document.getElementById('view').getContext('webgl');
+                    return {error:gl.getError(),width:gl.drawingBufferWidth};
+                }''')
+                assert result['error']==0 and result['width']>0,result
+            page.locator('#focus-workspace').click()
+            expect(page.locator('.inspector')).to_be_hidden()
+            page.locator('#focus-workspace').click()
+            expect(page.locator('.inspector')).to_be_visible()
             page.locator('#scene-items button').first.click()
             revision=2
             def apply():
@@ -49,17 +61,22 @@ def main():
                 expect(page.locator('#proposal')).to_be_hidden()
                 expect(page.locator('#new-property')).to_be_enabled()
                 assert library.get(project['id'])['revision']==revision
+            page.get_by_role('tab',name='Edit',exact=True).click()
             page.locator('#group-width').fill('8');page.locator('#group-form button[type=submit]').click();apply()
+            page.get_by_role('tab',name='Finish',exact=True).click()
             page.locator('#finish-pattern').select_option('wood');page.locator('#finish-rotation').fill('90')
             page.locator('#finish-form button[type=submit]').click();apply()
+            page.get_by_role('tab',name='Site',exact=True).click()
             page.locator('#terrain-tools > summary').click();page.locator('#terrain-mode').select_option('flatten')
             page.locator('#terrain-form button[type=submit]').click();apply()
+            page.get_by_role('tab',name='Build',exact=True).click()
             page.locator('details:has(#asset-import-form) > summary').click()
             page.locator('#asset-file').set_input_files(str(ROOT/'examples/bench.obj'))
             page.locator('#asset-import-form button[type=submit]').click()
             expect(page.locator('#asset-list option')).to_have_count(1)
             expect(page.locator('#asset-place')).to_be_enabled()
             page.locator('#asset-x').fill('10');page.locator('#asset-place').click();apply()
+            page.get_by_role('tab',name='Finish',exact=True).click()
             page.locator('#reference-board > summary').click()
             picture=Path(folder)/'sketch.png';picture.write_bytes(base64.b64decode(png()))
             page.locator('#reference-file').set_input_files(str(picture))
@@ -70,6 +87,7 @@ def main():
             apply();expect(page.locator('#reference-image')).to_be_visible()
             page.wait_for_function('document.getElementById("reference-image").naturalWidth>0')
             saved=library.get(project['id']);assert saved['scene']['references'][0]['mime']=='image/jpeg'
+            page.locator('#agent-setup > summary').click()
             page.locator('#reference-use').check();page.locator('#agent-provider').select_option('ollama')
             expect(page.locator('#agent-model option[value="small:latest"]')).to_have_count(1)
             page.locator('#agent-model').select_option('small:latest')
@@ -78,6 +96,7 @@ def main():
             assert len([body for path,body in fixture.calls if path=='/api/chat'][0]['messages'][1]['images'])==1
             apply();assert library.get(project['id'])['scene']['assemblies'][0]['spec']['width']==9
             # Ten-PR series: connected architecture, planting, reusable finishes, views and jobs.
+            page.get_by_role('tab',name='Build',exact=True).click()
             page.locator('#assembly-kind').select_option('dwelling')
             page.locator('#assembly-name').fill('Courtyard house');page.locator('#assembly-width').fill('12')
             page.locator('#assembly-rooms_x').fill('3');page.locator('#assembly-rooms_z').fill('2')
@@ -85,29 +104,36 @@ def main():
             house=library.get(project['id'])['scene']['assemblies'][-1]
             part=next(e for e in library.get(project['id'])['scene']['elements'] if e['id']==next(iter(house['members'].values())))
             page.locator('#scene-items button').filter(has_text=part['name']).first.click()
+            page.get_by_role('tab',name='Build',exact=True).click()
             page.locator('#foundation-panel > summary').click();page.locator('#foundation-clearance').fill('1.2')
             page.locator('#foundation-raise').click();apply()
             assert any(g['spec']['kind']=='foundation' for g in library.get(project['id'])['scene']['assemblies'])
             page.locator('#assembly-kind').select_option('gable_roof');page.locator('#roof-fit').click();apply()
+            page.get_by_role('tab',name='Site',exact=True).click()
             page.locator('details:has(#planting-form) > summary').click()
             page.locator('#plant-count').fill('3');page.locator('#plant-x').fill('20');page.locator('#plant-z').fill('15')
             page.locator('#planting-form button[type=submit]').click();apply()
+            page.get_by_role('tab',name='Finish',exact=True).click()
             page.locator('#palette-panel > summary').click();page.locator('#palette-list').select_option('builtin:light-tile')
             page.locator('#palette-apply').click();apply()
             # Five-PR series: a keyed wall opening and editable non-solid water.
+            page.get_by_role('tab',name='Build',exact=True).click()
             page.locator('#assembly-kind').select_option('wall_run');page.locator('#assembly-name').fill('Smoke wall')
             page.locator('#assembly-form button[type=submit]').click();apply()
             wall=library.get(project['id'])['scene']['assemblies'][-1]
             part=next(e for e in library.get(project['id'])['scene']['elements'] if e['id']==next(iter(wall['members'].values())))
             page.locator('#scene-items button').filter(has_text=part['name']).first.click()
+            page.get_by_role('tab',name='Build',exact=True).click()
             page.locator('#wall-tools > summary').click();page.locator('#opening-key').fill('entry')
             page.locator('#opening-kind').select_option('door');page.locator('#opening-width').fill('1.4');page.locator('#opening-height').fill('2.1')
             page.locator('#opening-form button[type=submit]').click();apply()
             expect(page.locator('#opening-list option')).to_have_count(1)
+            page.get_by_role('tab',name='Site',exact=True).click()
             page.locator('#water-panel > summary').click();page.locator('#water-name').fill('Smoke pool')
             page.locator('#water-form button[type=submit]').click();apply();page.locator('#water-schedule').click()
             expect(page.locator('#water-result')).to_contain_text('Smoke pool')
             assert any(e.get('collision') is False for e in library.get(project['id'])['scene']['elements'])
+            page.get_by_role('tab',name='Present',exact=True).click()
             page.locator('#presentation-panel > summary').click();page.locator('#view-name').fill('Arrival')
             page.locator('#view-fov').fill('60');page.locator('#view-fov').press('Tab')
             page.locator('#view-save').click();apply();expect(page.locator('#view-list option')).to_have_count(1)
@@ -116,10 +142,14 @@ def main():
             image_file=Path(image_download.value.path());assert image_file.read_bytes().startswith(b'\x89PNG');assert image_file.stat().st_size>1000
             with page.expect_download() as obj_download:page.locator('#view-obj').click()
             assert '# Units: metres; Y up' in Path(obj_download.value.path()).read_text()
+            page.get_by_role('tab',name='Build',exact=True).click()
             page.locator('#jobs-panel > summary').click();page.locator('#job-brief').fill('Set a rainy presentation atmosphere.')
             fixture.plan={'title':'Presentation weather','steps':['set weather to rain']}
             page.locator('#job-outline').click();expect(page.locator('#job-steps')).to_have_value('set weather to rain')
-            page.locator('#reference-use').uncheck();page.locator('#agent-provider').select_option('rules');page.locator('#agent-query').fill('')
+            page.get_by_role('tab',name='Finish',exact=True).click()
+            page.locator('#reference-use').uncheck()
+            page.get_by_role('tab',name='Build',exact=True).click()
+            page.locator('#agent-provider').select_option('rules');page.locator('#agent-query').fill('')
             page.locator('#job-form button[type=submit]').click();expect(page.locator('#job-list option')).to_have_count(1)
             page.locator('#job-start').click();expect(page.locator('#job-propose')).to_be_enabled()
             page.locator('#job-propose').click();expect(page.locator('#proposal-text')).to_contain_text('Design job step');apply()

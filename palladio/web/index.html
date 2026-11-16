@@ -9,13 +9,14 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Palladio Studio home"><span class="mark" aria-hidden="true">◈</span> PALLADIO <span>STUDIO</span></a>
+    <a class="brand" href="/" aria-label="Palladio Studio home"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 27V13L16 5l12 8v14M10 27V16h12v11M3 27h26M16 5v6" fill="none" stroke="currentColor" stroke-width="1.7"/></svg> PALLADIO <span>STUDIO</span></a>
     <div class="project-title" id="project-title">Property library</div>
+    <button type="button" id="focus-workspace" aria-pressed="false">Focus view</button>
     <button type="button" id="new-property" class="primary">New property</button>
   </header>
   <main>
     <aside class="library panel" aria-label="Property library">
-      <h2>Properties</h2>
+      <div class="panel-eyebrow">YOUR WORKSPACE</div><h2 class="panel-title">Properties</h2>
       <div id="properties" class="stack"></div>
       <button id="duplicate" type="button" disabled>Duplicate property</button>
       <details><summary>Transfer property</summary>
@@ -29,7 +30,7 @@
         <button id="diagnostics-download" type="button" disabled>Download diagnostics</button>
       </details>
       <hr>
-      <h2>Scene</h2>
+      <h2 class="scene-heading">Scene outline</h2>
       <div id="scene-items" class="stack"></div>
     </aside>
     <section class="workspace" aria-label="Property workspace">
@@ -42,31 +43,33 @@
             <button type="button" id="design-view" aria-pressed="true">Design</button>
             <button type="button" id="baseline-view" aria-pressed="false">Original site</button>
           </div>
-          <button id="frame" type="button">Reset view</button>
+          <div class="view-actions"><label class="quality-control">Quality<select id="render-quality"><option value="draft">Draft</option><option value="studio" selected>Studio</option><option value="presentation">Presentation</option></select></label><button id="frame" type="button">Reset view</button></div>
         </div>
         <div id="empty-state">
-          <h1>Start with a landscape.</h1>
+          <div class="panel-eyebrow">A PLACE TO BEGIN</div><h1>Imagine your<br>place in the world.</h1>
           <p>Describe a setting or import an elevation grid.</p>
           <button id="empty-create" type="button" class="primary">Create a property</button>
         </div>
         <div class="view-bottom">
-          <span id="site-profile"></span>
+          <div class="view-caption"><span id="site-profile"></span><span id="render-status" role="status"></span></div>
           <span id="navigation-hint">Drag to orbit · Shift + drag to pan · Scroll to zoom</span>
         </div>
       </div>
       <div class="prompt">
+        <details id="agent-setup"><summary>Design assistant <span>Model &amp; context</span></summary>
         <div class="agent-settings" aria-label="Agent connection">
           <label>Agent<select id="agent-provider"><option value="rules">Built-in commands</option><option value="ollama">Local Ollama</option></select></label>
           <label id="agent-model-label" hidden>Installed model<select id="agent-model"><option value="">Choose an installed model</option></select></label>
           <button id="refresh-models" type="button" hidden>Refresh models</button>
         </div>
-        <p id="agent-status" class="muted" role="status" aria-live="polite">Built-in commands use no language model.</p>
         <p id="agent-privacy" class="muted" hidden>Preview sends your prompt, scene excerpt and explicitly selected reference image to Ollama on this computer. A reference needs a vision-capable local model. No model downloads or remote services are started.</p>
         <label>Context filter (optional name/type)<input id="agent-query" maxlength="160" placeholder="e.g. garage — selection is always included"></label>
+        </details>
+        <p id="agent-status" class="muted" role="status" aria-live="polite">Built-in commands use no language model.</p>
         <form id="prompt-form">
           <label for="request">Design prompt</label>
           <div class="input-row">
-            <input id="request" maxlength="8000" placeholder="Set weather to fog" required>
+            <textarea id="request" maxlength="8000" rows="2" placeholder="Describe a change to your property…" required></textarea>
             <button id="preview-request" type="submit">Preview</button>
             <button id="cancel-request" type="button" hidden>Cancel request</button>
           </div>
@@ -87,7 +90,15 @@
       </div>
     </section>
     <aside class="inspector panel" aria-label="Property inspector">
-      <div id="inspector">
+      <div class="panel-eyebrow">DESIGN STUDIO</div>
+      <nav class="workspace-tabs" role="tablist" aria-label="Studio tools">
+        <button type="button" role="tab" id="workspace-tab-edit" data-workspace-tab="edit" aria-controls="inspector" aria-selected="false">Edit</button>
+        <button type="button" role="tab" id="workspace-tab-build" data-workspace-tab="build" aria-controls="inspector" aria-selected="false">Build</button>
+        <button type="button" role="tab" id="workspace-tab-site" data-workspace-tab="site" aria-controls="inspector" aria-selected="false">Site</button>
+        <button type="button" role="tab" id="workspace-tab-finish" data-workspace-tab="finish" aria-controls="inspector" aria-selected="false">Finish</button>
+        <button type="button" role="tab" id="workspace-tab-present" data-workspace-tab="present" aria-controls="inspector" aria-selected="false">Present</button>
+      </nav>
+      <div id="inspector" role="tabpanel" aria-labelledby="workspace-tab-edit">
         <details id="saved-source" hidden><summary>Site source</summary><p id="saved-source-text"></p></details>
         <details id="reference-board">
           <summary>Reference board</summary>

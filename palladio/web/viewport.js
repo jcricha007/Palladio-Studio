@@ -1,4 +1,5 @@
 import {surfaceTriangles} from "./mesh.js";
+import {QUALITY, lighting, materialResponse, surfaceVertex, surfaceFragment, shadowVertex, shadowFragment, skyVertex, skyFragment} from "./lighting.js";
 // WebGL adapter for the local-metre scene. Persistence and commands live in Python.
 const add = (a, b) => a.map((value, i) => value + b[i]);
 const sub = (a, b) => a.map((value, i) => value - b[i]);
@@ -10,36 +11,6 @@ const tint = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
 const rotate = ([x, y, z], angle) => [
   x * Math.cos(angle) + z * Math.sin(angle), y, -x * Math.sin(angle) + z * Math.cos(angle),
 ];
-const sun = normalize([-.4, .9, .6]);
-
-const vertex = `
-  attribute vec3 point;
-  attribute vec3 color;
-  uniform vec3 eye, right, up, forward;
-  uniform vec2 spread;
-  varying mediump vec3 surface;
-  varying mediump float viewDepth;
-  void main() {
-    vec3 relative = point - eye;
-    float depth = dot(relative, forward);
-    viewDepth = depth;
-    surface = color;
-    gl_Position = vec4(dot(relative, right) / spread.x, dot(relative, up) / spread.y,
-                       1.000016 * depth - 0.160001, depth);
-  }
-`;
-const fragment = `
-  precision mediump float;
-  uniform vec3 sky;
-  uniform float light, haze;
-  varying mediump vec3 surface;
-  varying mediump float viewDepth;
-  void main() {
-    float fog = 1.0 - exp(-max(viewDepth - 9.0, 0.0) * haze);
-    gl_FragColor = vec4(mix(surface * light, sky, min(fog, 0.97)), 1.0);
-  }
-`;
-
 function compile(gl, type, source) {
   const shader = gl.createShader(type);
   gl.shaderSource(shader, source);
@@ -50,18 +21,17 @@ function compile(gl, type, source) {
   return shader;
 }
 
-function triangle(vertices, a, b, c, color) {
+function triangle(vertices, a, b, c, color, response = [.9,0]) {
   const normal = normalize(cross(sub(b, a), sub(c, a)));
-  const shade = .65 + .35 * Math.max(0, dot(normal, sun));
-  for (const point of [a, b, c]) vertices.push(...point, ...scale(color, shade));
+  for (const point of [a, b, c]) vertices.push(...point, ...color, ...normal, ...response);
 }
 
-function quad(vertices, a, b, c, d, color) {
-  triangle(vertices, a, b, c, color);
-  triangle(vertices, a, c, d, color);
+function quad(vertices, a, b, c, d, color, response) {
+  triangle(vertices, a, b, c, color, response);
+  triangle(vertices, a, c, d, color, response);
 }
 
-function box(vertices, {size: [width, height, depth], position, yaw}, color) {
+function box(vertices, {size: [width, height, depth], position, yaw}, color, response) {
   const angle = yaw * Math.PI / 180;
   const w = width / 2;
   const d = depth / 2;
@@ -72,7 +42,7 @@ function box(vertices, {size: [width, height, depth], position, yaw}, color) {
   for (const [a, b, c, d] of [
     [0, 1, 2, 3], [4, 7, 6, 5], [0, 4, 5, 1],
     [1, 5, 6, 2], [2, 6, 7, 3], [3, 7, 4, 0],
-  ]) quad(vertices, corners[a], corners[b], corners[c], corners[d], color);
+  ]) quad(vertices, corners[a], corners[b], corners[c], corners[d], color, response);
 }
 
 function groundHeight(terrain, x, z) {
@@ -146,26 +116,24 @@ export class Viewport {
     const gl = canvas.getContext("webgl", {antialias: true, alpha: false});
     if (!gl) throw new Error("WebGL is unavailable. Property controls remain usable.");
     this.gl = gl;
-    this.program = gl.createProgram();
-    gl.attachShader(this.program, compile(gl, gl.VERTEX_SHADER, vertex));
-    gl.attachShader(this.program, compile(gl, gl.FRAGMENT_SHADER, fragment));
-    gl.linkProgram(this.program);
-    if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-      throw new Error(gl.getProgramInfoLog(this.program));
-    }
-    gl.useProgram(this.program);
-    this.uniforms = Object.fromEntries(
-      ["eye", "right", "up", "forward", "spread", "sky", "light", "haze"].map(
-        name => [name, gl.getUniformLocation(this.program, name)],
-      ),
-    );
-    this.buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-    for (const [name, offset] of [["point", 0], ["color", 12]]) {
-      const location = gl.getAttribLocation(this.program, name);
-      gl.enableVertexAttribArray(location);
-      gl.vertexAttribPointer(location, 3, gl.FLOAT, false, 24, offset);
-    }
+    const program = (vs, fs) => {
+      const result=gl.createProgram();
+      for (const [type,source] of [[gl.VERTEX_SHADER,vs],[gl.FRAGMENT_SHADER,fs]]) {
+        const shader=compile(gl,type,source);gl.attachShader(result,shader);gl.deleteShader(shader);
+      }
+      gl.linkProgram(result);
+      if (!gl.getProgramParameter(result,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(result));
+      return result;
+    };
+    this.program=program(surfaceVertex,surfaceFragment);
+    this.shadowProgram=program(shadowVertex,shadowFragment);
+    this.skyProgram=program(skyVertex,skyFragment);
+    this.buffer=gl.createBuffer();
+    this.skyBuffer=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,this.skyBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    this.quality='studio';
+    this.uniforms=new Map();
     gl.enable(gl.DEPTH_TEST);
     this.camera = {target: [0, 1, 0], azimuth: .68, pitch: .43, distance: 33};
     this.reset();
@@ -293,37 +261,135 @@ export class Viewport {
       if (item.mesh || item.finish && item.finish.pattern !== 'solid') {
         for (const surface of surfaceTriangles(item, materials[item.material])) {
           const points=surface.points.map(p=>add(item.position,rotate(p,item.yaw*Math.PI/180)));
-          triangle(vertices,...points,chosen?add(scale(surface.color,.72),[.28,.25,.15]):surface.color);
+          triangle(vertices,...points,chosen?add(scale(surface.color,.72),[.28,.25,.15]):surface.color,materialResponse(item.material));
         }
-      } else box(vertices, item, chosen ? add(scale(color, .72), [.28, .25, .15]) : color);
+      } else box(vertices, item, chosen ? add(scale(color, .72), [.28, .25, .15]) : color,materialResponse(item.material));
     }
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER,this.buffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertices), this.gl.STATIC_DRAW);
-    this.count = vertices.length / 6;
+    this.count = vertices.length / 11;
+    this.bounds = [[Infinity,Infinity,Infinity],[-Infinity,-Infinity,-Infinity]];
+    for(let i=0;i<vertices.length;i+=11) for(let axis=0;axis<3;axis++) {
+      this.bounds[0][axis]=Math.min(this.bounds[0][axis],vertices[i+axis]);
+      this.bounds[1][axis]=Math.max(this.bounds[1][axis],vertices[i+axis]);
+    }
+    this.shadowKey='';
     this.draw();
   }
 
-  draw() {
-    if (!this.count) return;
-    const fieldOfView = this.projectionScale();
-    const {canvas, gl, uniforms} = this;
-    const ratio = Math.min(2, window.devicePixelRatio || 1);
-    const width = Math.max(1, Math.round(canvas.clientWidth * ratio));
-    const height = Math.max(1, Math.round(canvas.clientHeight * ratio));
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
+  setQuality(value) {
+    if (!Object.hasOwn(QUALITY,value)) throw new Error('Choose Draft, Studio or Presentation.');
+    this.quality=value; this.shadowKey=''; this.draw();
+  }
+
+  qualityDescription() {
+    if (this.shadowFailed) return 'Material lighting · shadows unavailable on this device';
+    return {draft:'Fast material preview · shadows off',studio:'Sunlight · soft shadows · material lighting',
+      presentation:'High resolution · fine shadows · material lighting'}[this.quality];
+  }
+
+  uniform(program,name,value) {
+    const gl=this.gl;
+    if(!this.uniforms.has(program))this.uniforms.set(program,new Map());
+    const cache=this.uniforms.get(program);
+    if(!cache.has(name))cache.set(name,gl.getUniformLocation(program,name));
+    const location=cache.get(name);
+    if(Array.isArray(value)) {
+      if(value.length===2)gl.uniform2fv(location,value);else gl.uniform3fv(location,value);
+    } else gl.uniform1f(location,value);
+  }
+
+  use(program,sky=false) {
+    const gl=this.gl;gl.useProgram(program);
+    // Attribute locations differ between linked programs; disable old bindings.
+    for(let i=0;i<4;i++)gl.disableVertexAttribArray(i);
+    gl.bindBuffer(gl.ARRAY_BUFFER,sky?this.skyBuffer:this.buffer);
+    for(const [name,size,offset] of sky?[['point',2,0]]:[['point',3,0],['color',3,12],['normal',3,24],['material',2,36]]) {
+      const location=gl.getAttribLocation(program,name);
+      if(location<0)continue;
+      gl.enableVertexAttribArray(location);
+      gl.vertexAttribPointer(location,size,gl.FLOAT,false,sky?8:44,offset);
     }
-    gl.viewport(0, 0, width, height);
-    const {weather, hour} = this.environment;
-    const daylight = Math.max(.22, Math.sin((hour - 5) * Math.PI / 14));
-    const sky = scale(weather === "clear" ? [.69, .77, .77] : [.63, .68, .66], .4 + .6 * daylight);
-    gl.clearColor(...sky, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    for (const [name, value] of Object.entries(this.basis())) gl.uniform3fv(uniforms[name], value);
-    gl.uniform2f(uniforms.spread, fieldOfView * width / height, fieldOfView);
-    gl.uniform3fv(uniforms.sky, sky);
-    gl.uniform1f(uniforms.haze, {clear: this.imported ? .0006 : .004, overcast: .012, fog: .05, rain: .027}[weather]);
-    gl.uniform1f(uniforms.light, daylight * (weather === "clear" ? 1 : .85));
-    gl.drawArrays(gl.TRIANGLES, 0, this.count);
+  }
+
+  ensureShadow(size) {
+    const gl=this.gl;
+    size=Math.min(size,gl.getParameter(gl.MAX_TEXTURE_SIZE),gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
+    if(size && this.failedShadowSize===size)return false;
+    if(this.shadow?.size===size)return true;
+    if(this.shadow) {
+      gl.deleteTexture(this.shadow.texture);gl.deleteRenderbuffer(this.shadow.depth);gl.deleteFramebuffer(this.shadow.framebuffer);
+      this.shadow=null;
+    }
+    if(!size)return false;
+    const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,size,size,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+    for(const param of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,param,gl.NEAREST);
+    for(const param of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,param,gl.CLAMP_TO_EDGE);
+    const depth=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,depth);
+    gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,size,size);
+    const framebuffer=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth);
+    const complete=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    if(!complete) {
+      gl.deleteTexture(texture);gl.deleteRenderbuffer(depth);gl.deleteFramebuffer(framebuffer);
+      this.shadowFailed=true;this.failedShadowSize=size;return false;
+    }
+    this.shadow={size,texture,depth,framebuffer};this.shadowKey='';this.shadowFailed=false;this.failedShadowSize=0;return true;
+  }
+
+  draw() {
+    if (!this.count || this.gl.isContextLost()) return;
+    const {canvas,gl}=this;
+    const quality=QUALITY[this.quality];
+    const ratio=Math.min(quality.pixelRatio,window.devicePixelRatio||1);
+    const width=Math.max(1,Math.round(canvas.clientWidth*ratio));
+    const height=Math.max(1,Math.round(canvas.clientHeight*ratio));
+    if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+    const light=lighting(this.environment),basis=this.basis();
+    const spread=[this.projectionScale()*width/height,this.projectionScale()];
+    const shadowForward=scale(light.direction,-1);
+    const shadowRight=normalize(cross(shadowForward,[0,1,0]));
+    const shadowUp=cross(shadowRight,shadowForward);
+    const shadowCenter=this.camera.target;
+    const shadowExtent=Math.max(20,Math.min(220,this.camera.distance*1.2));
+    const shadowDepth=Math.max(100,...this.bounds.map(p=>Math.hypot(...sub(p,shadowCenter))))+20;
+    const shadowUniforms={shadowForward,shadowRight,shadowUp,shadowCenter,shadowExtent,shadowDepth};
+    const hasShadow=this.ensureShadow(quality.shadowSize)&&light.direct>.001;
+    if(hasShadow) {
+      const key=JSON.stringify([shadowCenter,shadowExtent,this.environment,this.quality]);
+      if(key!==this.shadowKey) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER,this.shadow.framebuffer);
+        gl.viewport(0,0,this.shadow.size,this.shadow.size);
+        gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.disable(gl.DITHER);
+        gl.clearColor(1,1,1,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+        this.use(this.shadowProgram);
+        for(const [name,value] of Object.entries(shadowUniforms))this.uniform(this.shadowProgram,name,value);
+        gl.drawArrays(gl.TRIANGLES,0,this.count);
+        this.shadowKey=key;
+      }
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,width,height);
+    gl.clearColor(...light.sky,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.disable(gl.DEPTH_TEST);gl.enable(gl.DITHER);
+    this.use(this.skyProgram,true);
+    for(const [name,value] of Object.entries({...basis,spread,sky:light.sky,sunDirection:light.direction,sunColor:light.color,directLight:light.direct}))this.uniform(this.skyProgram,name,value);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    gl.enable(gl.DEPTH_TEST);this.use(this.program);
+    const uniforms={...basis,spread,...shadowUniforms,sky:light.sky,sunDirection:light.direction,sunColor:light.color,
+      directLight:light.direct,ambientLight:light.ambient,haze:this.imported?light.haze*.35:light.haze,
+      shadowEnabled:hasShadow?1:0,shadowStep:hasShadow?1/this.shadow.size:1,shadowSamples:quality.samples};
+    for(const [name,value] of Object.entries(uniforms))this.uniform(this.program,name,value);
+    // WebGL requires a complete sampler even when the no-shadow branch is used.
+    if(!this.fallbackTexture) {
+      this.fallbackTexture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,this.fallbackTexture);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+    }
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,hasShadow?this.shadow.texture:this.fallbackTexture);
+    gl.uniform1i(gl.getUniformLocation(this.program,'shadowMap'),0);
+    gl.drawArrays(gl.TRIANGLES,0,this.count);
   }
 }

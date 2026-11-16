@@ -1,3 +1,4 @@
+import {setupWorkspace} from "./workspace.js";
 import {AssetTools} from "./assets.js";
 import {ReferenceTools} from "./references.js";
 import {Extensions} from './extensions.js';
@@ -193,7 +194,7 @@ function syncControls() {
   $("frame").disabled = !viewport || !project;
   $("restore").disabled = busy || !project || baselineView || project.history.length < 2;
   for (const control of document.querySelectorAll(
-    "#prompt-form input, #prompt-form button, #apply-plan, #discard-plan, #environment input, #environment select, " +
+    "#prompt-form input, #prompt-form textarea, #prompt-form button, #apply-plan, #discard-plan, #environment input, #environment select, " +
     "#environment button, #add-kind, #add-element, #element input, #element select, #element button, #history, #assembly-form input, #assembly-form select, #assembly-form button",
   )) control.disabled = busy || !project || baselineView;
   for (const button of $("properties").querySelectorAll("button")) button.disabled = busy;
@@ -611,6 +612,7 @@ $("discard-plan").addEventListener("click", () => {
 
 render();
 run(async () => {
+  setupWorkspace(viewport);
   catalog = await api("/api/catalog");
   try {
     const agent = await api("/api/agent");

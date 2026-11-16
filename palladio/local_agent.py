@@ -256,6 +256,18 @@ class OllamaPlanner:
             # resident after a selection change while Unreal needs GPU memory.
             "keep_alive": 0,
         }
+        # Reasoning tokens share the output budget. Prefer the lowest reported
+        # level for interactive edits, leaving room for the validated JSON plan.
+        thinking = details.get("thinking")
+        levels = thinking.get("values", []) if isinstance(thinking, dict) else []
+        architecture = details["model_info"].get("general.architecture", "")
+        if isinstance(levels, list) and "low" in levels:
+            payload["think"] = "low"
+            payload["options"]["num_predict"] = 4096
+        elif architecture == "gptoss":
+            # Older Ollama versions report capabilities but no thinking metadata.
+            payload["think"] = "low"
+            payload["options"]["num_predict"] = 4096
         if images: payload['messages'][1]['images'] = images
         result = self._request("/api/chat", payload)
         if is_remote(result) or result.get("done") is not True or result.get("done_reason") == "length":
