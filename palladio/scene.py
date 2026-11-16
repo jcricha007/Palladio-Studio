@@ -151,6 +151,9 @@ def edit_scene(scene, command, baseline=None):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
     if not isinstance(action,str):raise ValidationError("Choose a supported scene action.")
+    if action in ('foundation_fit','foundation_refit'):
+        from .foundations import edit_foundation
+        return edit_foundation(scene,command,baseline)
     if action in ('opening_set','opening_remove','wall_convert'):
         from .walls import edit_opening
         return edit_opening(scene,command,baseline)

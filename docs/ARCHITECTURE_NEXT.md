@@ -7,7 +7,7 @@ are reported separately. Merge status is not evidence of native rendering or mod
 | Order | Package | Status |
 | --- | --- | --- |
 | 1 | Editable wall runs and multiple framed openings | Implemented in this increment |
-| 2 | Foundations fitted beneath raised structures | Next |
+| 2 | Foundations fitted beneath raised structures | Implemented |
 | 3 | Pool and pond layouts with non-solid water | Next |
 | 4 | Shared saved views and native recall | Next |
 | 5 | Agent tools, cancellable job planning and acceptance scene | Next |
@@ -25,3 +25,16 @@ Independent box walls can be converted, preserving transform/material/finish in 
 wall-run specification. Existing room/grid walls remain linked to their original generators;
 detach explicitly before converting one. Conversion does not infer perpendicular wall axes,
 merge corners or create a new room polygon. Framing is schematic, not load-bearing design.
+
+## Fitted foundations
+
+Preview raising a selected room/garage/dwelling/terrace above the highest terrain point and
+fitting a separate pad-and-pier foundation underneath, or fit at its existing height. Each
+pad uses the highest ground within its own rotated footprint. Beams meet one level host
+underside; original ground and host geometry remain unchanged except the explicitly previewed
+raise. Refit a selected foundation after terrain or placement changes; warnings flag stale
+pad bases. Stable grid roles retain compatible finishes and identities.
+
+Supports are independent from the host. Move/copy them together using layout sets; refit
+supports afterward. Changing terrain does not silently move the building. These schematic
+pads, piers and beams do not determine excavation, soils, load paths or member capacity.

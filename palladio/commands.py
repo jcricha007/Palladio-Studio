@@ -21,10 +21,14 @@ def placement_warnings(project, scene):
     warnings = []
     for group in scene.get('assemblies', []):
         try:
+            if group['spec']['kind']=='foundation':
+                from .foundations import foundation_warnings
+                warnings.extend(foundation_warnings(group['spec'],active_terrain(project['baseline'],scene)))
+                continue
             low, high = footprint_range(active_terrain(project['baseline'], scene), group['spec'])
             base = group['spec']['position'][1]
             if base < high - .01: warnings.append(f"{group['spec']['name']}: terrain intersects the footprint by up to {high-base:.2f} m.")
-            if base > low + .05: warnings.append(f"{group['spec']['name']}: up to {base-low:.2f} m clearance beneath the footprint; supports are not generated.")
+            if base > low + .05: warnings.append(f"{group['spec']['name']}: up to {base-low:.2f} m clearance beneath the footprint; inspect support coverage.")
         except ValidationError:
             warnings.append(f"{group['spec']['name']}: footprint extends outside the terrain.")
     return warnings

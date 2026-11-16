@@ -213,6 +213,17 @@
           </div>
           <p id="asset-status" role="status" class="muted"></p>
         </details>
+        <details id="foundation-panel" class="stack"><summary>Raised structures and foundations</summary>
+          <p class="muted">Select a room, garage, connected dwelling or terrace. Supports are independent assemblies fitted to the current terrain; include them with the host in layout sets and refit after moving or terrain edits.</p>
+          <label>Pier columns<input id="foundation-columns_x" type="number" value="3" min="2" max="6"></label>
+          <label>Pier rows<input id="foundation-columns_z" type="number" value="3" min="2" max="6"></label>
+          <label>Pier width (m)<input id="foundation-pier_width" type="number" value="0.25" min="0.15" max="0.6" step="any"></label>
+          <label>Clearance above highest ground (m)<input id="foundation-clearance" type="number" value="1.2" min="0.6" max="10" step="any"></label>
+          <button id="foundation-raise" type="button">Preview raising structure and fitting supports</button>
+          <button id="foundation-fit" type="button">Preview supports at current height</button>
+          <button id="foundation-refit" type="button">Preview refitting selected foundation</button>
+          <p class="muted">Schematic pads, piers and beams. Soil, excavation and structural capacity are not calculated.</p>
+        </details>
         <details id="wall-tools" class="stack"><summary>Wall openings</summary>
           <p class="muted">Add a Wall with openings in the assembly builder, then select one of its parts. Rough opening sizes include the frames. Doors remain open.</p>
           <button id="wall-convert" type="button">Preview converting independent wall</button>

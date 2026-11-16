@@ -41,10 +41,14 @@ ASSEMBLIES['wall_run']={'label':'Wall with openings','width':6,'depth':.2,'heigh
     'limits':{'width':[.5,50],'depth':[.1,1],'height':[.5,12]}}
 
 
+ASSEMBLIES['foundation']={'label':'Pad-and-pier foundation','width':6,'depth':5,'height':1.2,'material':'concrete',
+    'limits':{'width':[2,60],'depth':[2,60],'height':[.6,12]}}
+
+
 def generate_assembly(data):
     if not isinstance(data, dict) or not data.keys() <= {
         "kind", "name", "width", "depth", "height", "position", "yaw", "material",
-        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang", "rooms_x", "rooms_z", "openings", "wall_finish"
+        "door_width", "door_height", "window_width", "window_height", "window_sill", "steps", "overhang", "rooms_x", "rooms_z", "openings", "wall_finish", "columns_x", "columns_z", "pier_width", "support_offsets"
     }:
         raise ValidationError("Choose supported assembly fields.")
     kind = data.get("kind")
@@ -63,6 +67,12 @@ def generate_assembly(data):
         "yaw": number(data.get("yaw", 0), "Assembly rotation", -360, 360),
         "material": data.get("material", defaults["material"]),
     }
+    foundation_fields={'columns_x','columns_z','pier_width','support_offsets'}
+    if kind=='foundation':
+        if set(data)-{'kind','name','width','height','depth','position','yaw','material'}-foundation_fields:raise ValidationError('Choose foundation parameters.')
+        from .foundations import foundation_parts
+        return foundation_parts(spec,data)
+    if set(data)&foundation_fields:raise ValidationError('Support parameters apply to foundations.')
     if kind=='wall_run':
         if set(data)&{'door_width','door_height','window_width','window_height','window_sill','overhang','steps','rooms_x','rooms_z'}:raise ValidationError('Wall runs use their opening list instead of shell or roof controls.')
         from .walls import wall_parts
