@@ -45,14 +45,32 @@ def edit_group(scene, command, baseline):
         changes = command.get('assembly')
         if not isinstance(changes, dict) or not changes or 'kind' in changes:
             raise ValidationError('Change assembly parameters without changing its type.')
-        regenerate(scene, group, {**group['spec'], **changes})
+        spec={**group['spec'],**changes}
+        if 'ground_anchor' in group:
+            from .planting import anchored_spec
+            from .scene import vector
+            position=vector(spec['position'],'Plant position',-900,900)
+            spec=anchored_spec(scene,group,spec,baseline,position[1]-group['spec']['position'][1])
+        regenerate(scene, group, spec)
     elif action == 'assembly_place':
         if baseline is None:
             raise ValidationError('Ground placement requires the saved property terrain.')
-        regenerate(scene, group, place_spec(baseline, scene, group['spec'], command.get('offset_m', 0)))
+        if 'ground_anchor' in group:
+            from .planting import anchored_spec
+            from .scene import number
+            group['ground_anchor']['offset_m']=number(command.get('offset_m',0),'Ground offset',-5,50)
+            spec=anchored_spec(scene,group,group['spec'],baseline)
+        else:spec=place_spec(baseline, scene, group['spec'], command.get('offset_m', 0))
+        regenerate(scene, group, spec)
     elif action == 'assembly_duplicate':
         spec = {**group['spec'], 'position': command.get('position')}
         duplicate = {'id': str(uuid4()), 'members': {}, 'overrides': deepcopy(group.get('overrides', {}))}
+        if 'ground_anchor' in group:
+            from .planting import anchored_spec
+            from .scene import vector
+            position=vector(spec['position'],'Plant position',-900,900)
+            duplicate['ground_anchor']=deepcopy(group['ground_anchor'])
+            spec=anchored_spec(scene,duplicate,spec,baseline,position[1]-group['spec']['position'][1])
         regenerate(scene, duplicate, spec)
         scene.setdefault('assemblies', []).append(duplicate)
     elif action in ('assembly_remove', 'assembly_detach'):

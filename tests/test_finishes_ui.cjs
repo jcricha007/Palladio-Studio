@@ -1,0 +1,7 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const nodes=new Map(),find=id=>{if(!nodes.has(id))nodes.set(id,{value:'',events:{},addEventListener(n,f){this.events[n]=f;},querySelectorAll(){return [];},replaceChildren(...items){this.items=items;this.value=items[0]?.value||'';}});return nodes.get(id);};
+let commands,busy=false;const project={id:'p',revision:1,scene:{finishes:[{id:'custom',name:'My finish'}]}},hooks={state:()=>({project,catalog:{finishes:{oak:{name:'Oak'}}},selected:'part',busy}),preview:c=>commands=c,invalidate(){}};
+const ctx=vm.createContext({find,hooks,Option:function(text,value){this.text=text;this.value=value;}});vm.runInContext(fs.readFileSync('palladio/web/finishes.js','utf8').replace('export class','class')+';const tools=new FinishTools(find,hooks);tools.render();tools.sync();',ctx);
+assert.equal(find('palette-remove').disabled,true);find('palette-list').value='custom';find('palette-scope').value='assembly';find('palette-apply').events.click();assert.equal(commands[0].scope,'assembly');assert.equal(commands[0].finish_id,'custom');
+find('palette-name').value='New';find('palette-save').events.click();assert.equal(commands[0].source_id,'part');busy=true;vm.runInContext('tools.sync()',ctx);assert.equal(find('palette-apply').disabled,true);
+console.log('PASS: palette selection, scoped application, capture and busy guards');

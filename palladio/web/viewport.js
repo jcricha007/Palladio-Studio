@@ -211,6 +211,18 @@ export class Viewport {
     }, {passive: false});
   }
 
+  captureCamera() {return {...this.camera,target:[...this.camera.target]};}
+
+  applyCamera(camera) {
+    this.camera={...camera,target:[...camera.target]};
+    this.maxDistance=Math.max(this.maxDistance||170,camera.distance);this.draw();
+  }
+
+  capturePng() {
+    this.draw();
+    return new Promise((resolve,reject)=>this.canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('The viewport image could not be captured.')),'image/png'));
+  }
+
   reset() {
     Object.assign(this.camera, this.defaultCamera || {target: [0, 1, 0], azimuth: .68, pitch: .43, distance: 33});
     this.draw();
@@ -272,7 +284,7 @@ export class Viewport {
     for (const item of this.items) {
       const chosen = item.id === selected;
       const color = tint(item.finish?.color || materials[item.material]);
-      if (item.mesh || item.finish?.pattern === 'wood') {
+      if (item.mesh || item.finish && item.finish.pattern !== 'solid') {
         for (const surface of surfaceTriangles(item, materials[item.material])) {
           const points=surface.points.map(p=>add(item.position,rotate(p,item.yaw*Math.PI/180)));
           triangle(vertices,...points,chosen?add(scale(surface.color,.72),[.28,.25,.15]):surface.color);

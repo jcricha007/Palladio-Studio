@@ -1,21 +1,39 @@
 # Palladio Studio build roadmap
 
-Updated 13 November 2026 after [PR #7](https://github.com/jcricha007/Palladio-Studio/pull/7)
-merged into `main` at `05e3515`. This roadmap distinguishes implemented capabilities,
-observed validation, and planned work. Milestone numbers describe product areas that can
-advance together. A merged increment does not close every acceptance item in its area.
+Updated 14 November 2026. PRs #8–#12 were verified on `main` at `adbcfd0`. The next ten
+implementation PRs are a review stack, not yet part of that verified main snapshot.
+[STUDIO_NEXT.md](STUDIO_NEXT.md) records their merge order, limits and acceptance commands.
+Milestone numbers describe product areas; merging an increment does not close every check.
+
+## Current development stack
+
+| Area | Implemented in the new stack | Still ahead |
+| --- | --- | --- |
+| Property portability | Checksummed snapshots with original ground, design, references, meshes, palettes and views; independent import | History/job transfer, larger interchange formats |
+| Architecture and layout | Multi-object layout/measurement, closed roof envelopes, connected rectangular room grids and clear-area schedules | Arbitrary floor-plan drafting, framing, support/collision design feedback |
+| Landscape and finishes | Seeded schematic trees/hedges with terrain anchors; reusable finishes and matching surface patterns | Detailed assets, water, PBR maps, vegetation streaming |
+| Presentation | Saved browser cameras, PNG capture and metre/Y-up OBJ export | Native camera recall, material interchange, polished lighting/weather |
+| Design jobs | Durable briefs, local-model outline suggestions, pause/resume, saved proposals, atomic reviewed step checkpoints | Longer context, broader tools, quality evaluation, native job UI; no unattended execution yet |
+| Windows delivery | Fresh-terminal launcher, UE 5.7 discovery, pre-migration backup, build/library diagnostics and local acceptance reports | Workstation acceptance and packaged distribution |
+
+Current local evidence: **100 Python tests and 14 Node suites passed**, with syntax and diff
+checks. Python uses real loopback HTTP and fake model responses; Node uses DOM doubles and
+geometry comparisons. PowerShell execution, UE compilation/visuals/collision, rendered
+browser acceptance and real local-model quality/latency/VRAM are still outstanding. The
+optional browser workflow is supplied; this environment previously blocked Chromium startup.
+Hosted CI remains skipped. The sections below preserve earlier milestones and evidence.
 
 ## Four-PR stack above PR #8
 
-This branch contains implementation beyond `main`. Merge in dependency order; these entries
-are not claims that the work has already merged or passed native acceptance.
+This four-PR stack is now merged into `main`. Its local checks and remaining native
+acceptance requirements are preserved below.
 
 | Order | Branch / PR | Delivered in the stack |
 | --- | --- | --- |
 | 1 | `palladio/assembly-placement` · [#9](https://github.com/jcricha007/Palladio-Studio/pull/9) | Persistent groups, stable part IDs, parameter edits, explicit detach and footprint-aware ground placement. |
 | 2 | `palladio/building-landscape` · [#10](https://github.com/jcricha007/Palladio-Studio/pull/10) | Linked stairs, paths/terraces, planters and reversible terrain layers with original-site comparison. |
 | 3 | `palladio/assets-finishes` · [#11](https://github.com/jcricha007/Palladio-Studio/pull/11) | Local OBJ/captured asset library, transferable packets, embedded instances, colour and wood finishes. |
-| 4 | `palladio/reference-agent` | Revisioned image/cue boards, local vision proposals, context filtering and validated group/finish/terrain agent commands. |
+| 4 | `palladio/reference-agent` · [#12](https://github.com/jcricha007/Palladio-Studio/pull/12) | Revisioned image/cue boards, local vision proposals, context filtering and validated group/finish/terrain agent commands. |
 
 At the stack tip, 62 Python tests and seven Node suites pass locally. The Python tests cover
 real loopback HTTP and a fake Ollama runtime; Node uses DOM doubles/pure geometry checks.
@@ -200,15 +218,14 @@ measurements, automatic saves, native agent panel or autonomous long-job executi
 
 ## Where development goes next
 
-1. Complete the Windows walkthrough of this stack: old-property reopening, group editing,
-   terrain restore, imported mesh silhouettes/placement/collision, finishes and reference
-   history. Run the optional rendered test and evaluate a real local vision model alongside
-   Unreal before choosing a default. Record findings rather than treating merge as acceptance.
-2. Deepen building and landscape authoring: connected layouts, roof systems, more useful
-   openings, planted vegetation, water and support/overlap feedback. Preserve group identity.
-3. Improve material/asset fidelity: PBR/texture maps, asset provenance and streaming budgets,
-   richer furnishings/vegetation, and lighting/weather. The current OBJ and coarse wood
-   implementation is a foundation, not completion of this larger milestone.
-4. Build long design jobs on the revisioned command path: durable briefs/references,
-   decomposition, checkpoints, pause/resume and reconciliation after manual edits. Keep
-   Windows delivery and backup/export evolving with these capabilities.
+1. Review and merge the ten increments in order, then run the Windows acceptance script on
+   the exact final commit. Reopen existing properties and verify the pre-upgrade backup.
+2. Walk through connected rooms, roof fitting, plant grounding, finishes and imported meshes
+   in both viewports. Check collision, silhouettes, transformations and original-site restore.
+3. Exercise a real local model with brief decomposition, references, multi-step edits,
+   pause/resume and stale proposals while Unreal is open. Record quality, latency and VRAM
+   before selecting a default model or extending unattended execution.
+4. Build the next fidelity layer: arbitrary room/opening edits, structural supports, richer
+   terrain/water, asset streaming and PBR materials. Keep source versus inferred site data clear.
+5. Bring saved views and job review into the native experience, then package a Windows beta
+   with tested upgrade/backup recovery, performance budgets and recorded acceptance evidence.

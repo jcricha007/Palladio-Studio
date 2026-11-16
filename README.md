@@ -4,13 +4,24 @@ Palladio Studio is a local-first architectural sandbox for creating and revisiti
 
 ## Run the studio
 
-Use Python 3.11 or newer and a browser with WebGL. From PowerShell:
+Use Python 3.11 or newer and a browser with WebGL. From a fresh PowerShell terminal on the existing Windows checkout:
 
 ```powershell
-git clone https://github.com/jcricha007/Palladio-Studio.git
-Set-Location Palladio-Studio
-py -m palladio
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+& "$env:USERPROFILE\Palladio-Studio\scripts\Start-PalladioStudio.ps1"
 ```
+
+For a new checkout, clone `https://github.com/jcricha007/Palladio-Studio.git` first.
+The Windows launcher resolves the repository from its own location, uses the existing
+`.palladio/properties.sqlite3`, and creates a SQLite backup before a schema upgrade. It
+refuses an occupied port without stopping any other process. Close an older studio server
+before starting an updated checkout. Keep the terminal open while using the application.
+
+To start the browser and Unreal together, add `-WithUnreal`. It discovers a complete UE 5.7
+installation through Epic's records and opens the most recently updated property. Use
+`-UnrealRoot`, `-PropertyId`, `-Port`, `-OllamaPort` or `-LibraryPath` to override those defaults.
+If the library is empty, create a property in the browser and launch Unreal in a second
+terminal. Unreal remains a developer build requiring Visual Studio C++ and the Windows SDK.
 
 On macOS or Linux, run `python3 -m palladio` from the repository. If the browser does not open automatically, visit [http://127.0.0.1:8765](http://127.0.0.1:8765). Stop the app with Ctrl+C in the terminal. It runs locally with Python's standard library and requires no packages, model downloads, or API keys.
 
@@ -18,7 +29,7 @@ On macOS or Linux, run `python3 -m palladio` from the repository. If the browser
 2. Drag in the viewport to orbit, Shift+drag to pan, and scroll to zoom. Select an element in the scene list or the viewport to change its size, position, rotation, or material.
 3. Change the weather or time in the inspector, or enter a supported prompt such as **set weather to fog**, **set time to 17:30**, **add a wall**, or **use oak** with an element selected. Review the proposed change and click **Apply**.
 4. Switch to **Original site** to see the generated terrain and initial atmosphere. Restore an earlier design from **History** or duplicate the property to try a separate design.
-5. Close and relaunch the app to reopen the property. Committed edits are saved as revisions in `.palladio/properties.sqlite3` relative to the launch directory. Use `--library PATH` to choose a different database and `--port PORT` if 8765 is occupied.
+5. Close and relaunch the app to reopen the property. The Windows launcher saves revisions in the checkout’s `.palladio/properties.sqlite3`; direct `python -m palladio` uses the current directory. Use `--library PATH` to choose a different database and `--port PORT` if 8765 is occupied.
 
 ## Run the Unreal viewport preview on Windows
 
@@ -57,20 +68,34 @@ The preview uses solid/per-face colours, coarse procedural wood finishes and sim
 
 ## Current scope
 
-This checkout includes procedural/imported/downloaded terrain, linked building and furnishing assemblies, ground placement, reversible terrain layers, reusable triangle assets, solid/wood finishes, atmosphere controls, duplication and revision history. The Unreal developer preview opens the same properties and commits element/group moves. A saved reference board and bounded local Ollama proposals share manual Preview/Apply. Texture/PBR maps, more detailed building/landscape tools, richer atmosphere and autonomous design jobs remain on the roadmap. See the roadmap for merged versus stacked work and outstanding acceptance.
+This development stack adds portable property snapshots, layout sets, gable/hip/shed roofs,
+connected room grids, terrain-anchored planting, finish palettes, saved browser cameras,
+PNG/OBJ presentation export, persistent design jobs, and local-model outlines with reviewed
+step application. Each job Apply saves the scene and its checkpoint atomically; no next
+step runs unattended. The Unreal developer preview shares saved geometry and edits.
+
+See [the ten-PR series](docs/STUDIO_NEXT.md) for limits and merge order, and
+[the roadmap](docs/ROADMAP.md) for merged versus stacked progress. PBR textures, arbitrary
+floor-plan editing, richer assets/weather, native job controls and packaged Windows delivery
+remain ahead. Merge status does not establish Windows or real-model acceptance.
 
 ## Develop
 
 ```powershell
-py -m unittest discover -s tests -v
-node tests/test_assembly_ui.cjs
-node tests/test_agent_ui.cjs
-node tests/test_site_ui.cjs
-node tests/test_tools_ui.cjs
-node tests/test_assets_ui.cjs
-node tests/test_mesh.cjs
-node tests/test_reference_ui.cjs
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+& "$env:USERPROFILE\Palladio-Studio\scripts\Validate-Palladio.ps1"
 ```
+
+This records the checkout, local test results and console output under `.palladio/checks`.
+Node.js is required for JavaScript checks. Add `-BuildUnreal` to compile UE 5.7, or
+`-BrowserSmoke` to run the rendered workflow when Playwright and Chromium are already
+installed. These optional checks are reported separately; no downloads or hosted CI are
+started. `-ExpectedHead` rejects accidentally testing a different commit.
+
+Use **Studio diagnostics → Check running studio** to verify the active build and library.
+`py -m palladio.diagnostics --backup` creates a consistent database backup from the checkout;
+pass `--library PATH` for another library. The database migrates to schema 2 for design jobs.
+Snapshots/duplicates carry the saved design, not job progress or earlier history.
 
 | Path | Responsibility |
 | --- | --- |
@@ -360,3 +385,8 @@ placement, image normalization, a vision proposal, Apply and reopen. It could no
 development environment because Chromium's startup socket was blocked; it is not recorded
 as passing. Windows acceptance must also rebuild Unreal, verify mesh placement/collision,
 exercise history restore and test a real local vision model.
+
+[Next studio development series and acceptance notes](docs/STUDIO_NEXT.md)
+
+Use **Transfer property** in the library sidebar to export a saved snapshot or import one
+as a new property. Placed assets and reference images travel with the snapshot.

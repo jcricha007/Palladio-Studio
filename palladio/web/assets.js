@@ -27,7 +27,7 @@ export class AssetTools {
     }));
     find('finish-form').addEventListener('submit',event=>{
       event.preventDefault();const {selected}=hooks.state();if(!selected)return;
-      hooks.preview([{action:'update',id:selected,element:{finish:{color:find('finish-color').value,pattern:find('finish-pattern').value,scale_m:Number(find('finish-scale').value),rotation:Number(find('finish-rotation').value),source_colors:find('finish-source').checked}}}]);
+      hooks.preview([{action:'update',id:selected,element:{finish:{color:find('finish-color').value,accent_color:find('finish-accent').value,pattern:find('finish-pattern').value,scale_m:Number(find('finish-scale').value),rotation:Number(find('finish-rotation').value),source_colors:find('finish-source').checked}}}]);
     });
     find('finish-reset').addEventListener('click',()=>{const {selected}=hooks.state();if(selected)hooks.preview([{action:'update',id:selected,element:{finish:null}}]);});
     for(const form of ['asset-import-form','asset-placement','finish-form'])for(const event of ['input','change'])find(form).addEventListener(event,hooks.invalidate);
@@ -44,6 +44,7 @@ export class AssetTools {
     this.find('finish-panel').hidden=!item;if(!item)return;
     const finish=item.finish||{};
     this.find('finish-color').value=finish.color||materials[item.material];this.find('finish-pattern').value=finish.pattern||'solid';
+    this.find('finish-accent').value=finish.accent_color||'#c8c1b7';
     this.find('finish-scale').value=finish.scale_m||.25;this.find('finish-rotation').value=finish.rotation||0;
     this.find('finish-source').checked=finish.source_colors??Boolean(item.mesh?.colors);
   }

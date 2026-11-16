@@ -131,3 +131,5 @@ dialog h1 { margin-bottom: .4rem; font-family: "Instrument Serif", Georgia, seri
 #site-status { color: var(--accent); }
 #saved-source { margin-bottom: 1rem; }
 dialog { max-height: 92vh; overflow-y: auto; }
+
+.job-details { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 24rem; overflow: auto; font: inherit; }

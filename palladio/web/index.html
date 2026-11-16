@@ -18,6 +18,16 @@
       <h2>Properties</h2>
       <div id="properties" class="stack"></div>
       <button id="duplicate" type="button" disabled>Duplicate property</button>
+      <details><summary>Transfer property</summary>
+        <p class="muted">Exports the saved design, original site, embedded assets and references. Import creates a new property; earlier history and unused library assets are not included.</p>
+        <button id="property-export" type="button">Export saved snapshot</button>
+        <label>Import snapshot<input id="property-import" type="file" accept=".json,application/json"></label>
+      </details>
+      <details><summary>Studio diagnostics</summary>
+        <button id="diagnostics-refresh" type="button">Check running studio</button>
+        <pre id="diagnostics-result" class="job-details"></pre>
+        <button id="diagnostics-download" type="button" disabled>Download diagnostics</button>
+      </details>
       <hr>
       <h2>Scene</h2>
       <div id="scene-items" class="stack"></div>
@@ -94,6 +104,20 @@
             <button id="reference-remove" type="button">Preview remove reference</button>
           </form>
         </details>
+        <details><summary>Layout and measurements</summary>
+          <form id="layout-form" class="stack">
+            <p id="layout-selection" class="muted"></p>
+            <button id="layout-include" type="button">Add selected part / assembly</button>
+            <button id="layout-clear" type="button">Clear set</button>
+            <label>Operation<select id="layout-operation"><option value="move">Move set</option><option value="copy">Copy set</option><option value="rotate">Rotate around first origin</option><option value="align">Align origins to first</option><option value="distribute">Distribute origins evenly</option><option value="grid">Snap origins to grid</option></select></label>
+            <div class="triplet"><label>Offset X<input id="layout-x" type="number" step="any" value="0"></label><label>Y<input id="layout-y" type="number" step="any" value="0"></label><label>Z<input id="layout-z" type="number" step="any" value="0"></label></div>
+            <label>Align/distribute axis<select id="layout-axis"><option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select></label>
+            <label>Rotation (degrees)<input id="layout-angle" type="number" value="90" min="-360" max="360" step="any"></label>
+            <label>Grid (m)<input id="layout-spacing" type="number" value="1" min="0.01" max="100" step="any"></label>
+            <button id="layout-preview" type="submit">Preview layout</button><button id="layout-measure" type="button">Measure set</button>
+            <p id="layout-measurement" class="muted" role="status"></p>
+          </form>
+        </details>
         <section id="group-panel" hidden>
           <h2 id="group-title">Selected assembly</h2>
           <form id="group-form" class="stack">
@@ -110,6 +134,8 @@
             </div>
             <label>Rotation (degrees)<input id="group-yaw" type="number" step="any" required></label>
             <label id="group-steps-label" hidden>Step count<input id="group-steps" type="number" min="2" max="32" step="1"></label>
+            <label id="group-overhang-label" hidden>Roof overhang (m)<input id="group-overhang" type="number" min="0" max="3" step="any" value="0.3"></label>
+            <div id="group-grid" hidden class="triplet"><label>Room columns<input id="group-rooms_x" type="number" min="1" max="4" step="1" value="2"></label><label>Rows<input id="group-rooms_z" type="number" min="1" max="4" step="1" value="2"></label></div>
             <div id="group-openings" class="stack">
               <label>Door width<input id="group-door_width" type="number" step="any"></label>
               <label>Door height<input id="group-door_height" type="number" step="any"></label>
@@ -153,6 +179,15 @@
             <button id="terrain-restore" type="button">Preview restore original ground</button>
           </form>
         </details>
+        <details><summary>Planted landscape</summary><form id="planting-form" class="stack">
+          <p class="muted">Designed plants follow terrain changes. The original landscape stays saved. Preview spacing before Apply; overlaps are not resolved.</p>
+          <label>Type<select id="plant-kind"><option value="pine">Pine</option><option value="broadleaf">Broadleaf</option><option value="hedge">Hedge</option></select></label>
+          <label>Name<input id="plant-name" value="Planting" maxlength="50" required></label>
+          <div class="triplet"><label>Width<input id="plant-width" type="number" step="any" min="0.5" max="15" value="3"></label><label>Depth<input id="plant-depth" type="number" step="any" min="0.5" max="15" value="3"></label><label>Height<input id="plant-height" type="number" step="any" min="0.5" max="30" value="5"></label></div>
+          <div class="triplet"><label>X<input id="plant-x" type="number" value="15" step="any"></label><label>Z<input id="plant-z" type="number" value="15" step="any"></label><label>Offset (m)<input id="plant-offset_m" type="number" value="0" min="-5" max="50" step="any"></label></div>
+          <div class="triplet"><label>Count<input id="plant-count" type="number" value="1" min="1" max="64" step="1"></label><label>Radius (m)<input id="plant-radius_m" type="number" value="8" min="0" max="100" step="any"></label><label>Seed<input id="plant-seed" type="number" value="1" min="0" max="2147483647" step="1"></label></div>
+          <button type="submit">Preview planting</button>
+        </form></details>
         <hr>
         <details>
           <summary>Reusable assets</summary>
@@ -178,13 +213,60 @@
           </div>
           <p id="asset-status" role="status" class="muted"></p>
         </details>
+        <details id="jobs-panel" class="stack">
+          <summary>Design jobs</summary>
+          <p class="muted">Keep a brief and ordered steps across sessions. Complete each step with a reviewed property revision and a checkpoint note.</p>
+          <form id="job-form" class="stack">
+            <label>Title<input id="job-title" maxlength="100" required></label>
+            <label>Design brief<textarea id="job-brief" maxlength="64000" rows="4" required></textarea></label>
+            <label>Ordered steps · one per line<textarea id="job-steps" rows="5" required></textarea></label>
+            <button id="job-outline" type="button">Suggest steps with selected local model</button>
+            <button type="submit">Save design job</button>
+          </form>
+          <label>Saved jobs<select id="job-list"></select></label>
+          <button id="job-refresh" type="button">Refresh jobs</button>
+          <pre id="job-details" class="job-details"></pre>
+          <p id="job-agent-status" class="muted" role="status">Uses the provider/model and context filter selected in the agent panel, plus any selected reference image. Each step requires review and Apply. No steps run unattended.</p>
+          <button id="job-propose" type="button">Preview current step with agent</button>
+          <button id="job-review" type="button">Review saved step proposal</button>
+          <button id="job-start" type="button">Start job</button>
+          <button id="job-pause" type="button">Pause job</button>
+          <button id="job-resume" type="button">Resume job</button>
+          <label>Checkpoint note<input id="job-note" maxlength="1000" placeholder="What was completed and reviewed?"></label>
+          <button id="job-checkpoint" type="button">Complete current step manually</button>
+          <button id="job-cancel" type="button">Cancel job</button>
+        </details>
+        <details id="presentation-panel" class="stack">
+          <summary>Views and presentation</summary>
+          <label>Saved view<select id="view-list"></select></label>
+          <button id="view-open" type="button">Go to view</button>
+          <label>View name<input id="view-name" value="Main view" maxlength="80"></label>
+          <button id="view-save" type="button">Preview saving camera</button>
+          <button id="view-update" type="button">Preview replacing camera</button>
+          <button id="view-remove" type="button">Preview removing view</button>
+          <button id="view-png" type="button">Download viewport PNG</button>
+          <label class="checkbox"><input id="view-terrain" type="checkbox" checked>Include terrain in OBJ</label>
+          <button id="view-obj" type="button">Export saved geometry OBJ</button>
+          <p class="muted">OBJ contains placed geometry and optional terrain, in metres with Y up. Materials, source vegetation and water are omitted. PNG captures the current viewport, including any preview.</p>
+          <p id="view-status" class="muted" role="status"></p>
+        </details>
+        <details id="palette-panel" class="stack">
+          <summary>Finish palettes</summary>
+          <label>Preset<select id="palette-list"></select></label>
+          <label>Apply to<select id="palette-scope"><option value="part">Selected part</option><option value="assembly">Whole assembly</option></select></label>
+          <button id="palette-apply" type="button">Preview preset</button>
+          <label>New preset name<input id="palette-name" maxlength="80" value="My finish"></label>
+          <button id="palette-save" type="button">Preview saving selected finish</button>
+          <button id="palette-remove" type="button">Preview removing preset</button>
+        </details>
         <section id="finish-panel" hidden>
           <h2>Selected finish</h2>
           <form id="finish-form" class="stack">
             <label>Colour<input id="finish-color" type="color" value="#b78554"></label>
-            <label>Pattern<select id="finish-pattern"><option value="solid">Solid</option><option value="wood">Wood grain</option></select></label>
-            <label>Grain spacing (m)<input id="finish-scale" type="number" value="0.25" min="0.02" max="10" step="any" required></label>
-            <label>Grain direction<input id="finish-rotation" type="number" value="0" min="-360" max="360" step="any" required></label>
+            <label>Grout colour<input id="finish-accent" type="color" value="#c8c1b7"></label>
+            <label>Pattern<select id="finish-pattern"><option value="solid">Solid</option><option value="wood">Wood grain</option><option value="stone">Stone</option><option value="tile">Tile</option><option value="brick">Brick</option></select></label>
+            <label>Pattern scale (m)<input id="finish-scale" type="number" value="0.25" min="0.02" max="10" step="any" required></label>
+            <label>Pattern direction<input id="finish-rotation" type="number" value="0" min="-360" max="360" step="any" required></label>
             <label class="checkbox"><input id="finish-source" type="checkbox">Use imported triangle colours</label>
             <button type="submit">Preview finish</button>
             <button id="finish-reset" type="button">Preview original finish</button>
@@ -213,6 +295,10 @@
             </div>
           </fieldset>
           <label>Rotation in degrees<input id="assembly-yaw" type="number" step="any" value="0" min="-360" max="360" required></label>
+          <label id="assembly-overhang-label" hidden>Roof overhang (m)<input id="assembly-overhang" type="number" min="0" max="3" step="any" value="0.3"></label>
+          <div id="assembly-grid" hidden class="triplet"><label>Room columns<input id="assembly-rooms_x" type="number" min="1" max="4" step="1" value="2"></label><label>Rows<input id="assembly-rooms_z" type="number" min="1" max="4" step="1" value="2"></label></div>
+          <button id="roof-fit" type="button">Preview roof fitted to selected shell</button>
+          <button id="room-schedule" type="button">Show room areas</button><pre id="room-schedule-text"></pre>
           <label>Primary material<select id="assembly-material"></select></label>
           <button type="submit">Preview assembly</button>
           <p class="muted">Shell height is clear interior height; Y is the floor bottom. Placement does not follow terrain automatically. Preview does not save. Use Apply below the scene to commit one revision. Pieces remain individually editable; these are design studies, not construction documents.</p>

@@ -13,6 +13,7 @@ MATERIALS = {
     "glass": "#7fa7aa",
     "stone": "#8d8980",
     "plaster": "#e1d7c6",
+    "foliage": "#49734a",
 }
 ELEMENTS = {
     "wall": [5, 2.8, 0.25],
@@ -149,6 +150,22 @@ def edit_scene(scene, command, baseline=None):
     if not isinstance(command, dict):
         raise ValidationError("Command must be an object.")
     action = command.get("action")
+    if not isinstance(action,str):raise ValidationError("Choose a supported scene action.")
+    if action in ('view_save','view_update','view_remove'):
+        from .presentation import edit_view
+        return edit_view(scene,command)
+    if action in ('finish_save','finish_apply','finish_remove'):
+        from .finishes import edit_finish
+        return edit_finish(scene,command,baseline)
+    if action=='planting':
+        from .planting import plant
+        return plant(scene,command,baseline)
+    if action=='roof_fit':
+        from .roofs import fit_roof
+        return fit_roof(scene,command,baseline)
+    if action=='layout':
+        from .layout import edit_layout
+        return edit_layout(scene,command,baseline)
     if action in {'reference_add','reference_update','reference_remove'}:
         from .references import edit_reference
         return edit_reference(scene, command)

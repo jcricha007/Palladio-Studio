@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const nodes=new Map(),find=id=>{if(!nodes.has(id))nodes.set(id,{value:'',events:{},addEventListener(n,f){(this.events[n]??=[]).push(f);},querySelectorAll(){return [];}});return nodes.get(id);};
+let commands,project={id:'p',scene:{assemblies:[{id:'g',spec:{kind:'dwelling'},members:{floor:'e'}}]}};
+const hooks={state:()=>({project,selected:'e',busy:false,baselineView:false}),preview:c=>commands=c,invalidate(){},run:f=>f()};
+const ctx=vm.createContext({find,hooks});for(const file of ['roofs','rooms','planting'])vm.runInContext(fs.readFileSync('palladio/web/'+file+'.js','utf8').replace('export class','class'),ctx);
+vm.runInContext('const roofs=new RoofTools(find,hooks),rooms=new RoomTools(find,hooks),plants=new PlantingTools(find,hooks);',ctx);
+for(const [id,value] of Object.entries({'assembly-kind':'gable_roof','assembly-name':'Roof','assembly-height':'2','assembly-material':'oak','assembly-overhang':'.4'}))find(id).value=value;
+vm.runInContext('roofs.render()',ctx);assert.equal(find('roof-fit').disabled,false);find('roof-fit').events.click[0]();assert.equal(commands[0].id,'g');assert.equal(commands[0].roof.overhang,.4);
+find('assembly-kind').value='dwelling';vm.runInContext('rooms.render()',ctx);assert.equal(find('assembly-grid').hidden,false);
+for(const [key,value] of Object.entries({kind:'pine',name:'Grove',x:'12',z:'4',width:'3',depth:'3',height:'5',radius_m:'8',count:'4',seed:'17',offset_m:'0'}))find('plant-'+key).value=value;
+find('planting-form').events.submit[0]({preventDefault(){}});assert.equal(commands[0].planting.count,4);assert.equal(commands[0].planting.seed,17);assert.deepEqual(Array.from(commands[0].planting.center),[12,4]);
+console.log('PASS: roof fitting, dwelling grid controls and seeded planting requests');

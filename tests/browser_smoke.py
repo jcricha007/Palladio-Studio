@@ -76,6 +76,37 @@ def main():
             page.locator('#preview-request').click();expect(page.locator('#proposal-text')).to_contain_text('Widen the whole garage')
             assert len([body for path,body in fixture.calls if path=='/api/chat'][0]['messages'][1]['images'])==1
             apply();assert library.get(project['id'])['scene']['assemblies'][0]['spec']['width']==9
+            # Ten-PR series: connected architecture, planting, reusable finishes, views and jobs.
+            page.locator('#assembly-kind').select_option('dwelling')
+            page.locator('#assembly-name').fill('Courtyard house');page.locator('#assembly-width').fill('12')
+            page.locator('#assembly-rooms_x').fill('3');page.locator('#assembly-rooms_z').fill('2')
+            page.locator('#assembly-form button[type=submit]').click();apply()
+            house=library.get(project['id'])['scene']['assemblies'][-1]
+            part=next(e for e in library.get(project['id'])['scene']['elements'] if e['id']==next(iter(house['members'].values())))
+            page.locator('#scene-items button').filter(has_text=part['name']).first.click()
+            page.locator('#assembly-kind').select_option('gable_roof');page.locator('#roof-fit').click();apply()
+            page.locator('details:has(#planting-form) > summary').click()
+            page.locator('#plant-count').fill('3');page.locator('#plant-x').fill('20');page.locator('#plant-z').fill('15')
+            page.locator('#planting-form button[type=submit]').click();apply()
+            page.locator('#palette-panel > summary').click();page.locator('#palette-list').select_option('builtin:light-tile')
+            page.locator('#palette-apply').click();apply()
+            page.locator('#presentation-panel > summary').click();page.locator('#view-name').fill('Arrival')
+            page.locator('#view-save').click();apply();expect(page.locator('#view-list option')).to_have_count(1)
+            page.locator('#view-open').click()
+            with page.expect_download() as image_download:page.locator('#view-png').click()
+            image_file=Path(image_download.value.path());assert image_file.read_bytes().startswith(b'\x89PNG');assert image_file.stat().st_size>1000
+            with page.expect_download() as obj_download:page.locator('#view-obj').click()
+            assert '# Units: metres; Y up' in Path(obj_download.value.path()).read_text()
+            page.locator('#jobs-panel > summary').click();page.locator('#job-brief').fill('Set a rainy presentation atmosphere.')
+            fixture.plan={'title':'Presentation weather','steps':['set weather to rain']}
+            page.locator('#job-outline').click();expect(page.locator('#job-steps')).to_have_value('set weather to rain')
+            page.locator('#reference-use').uncheck();page.locator('#agent-provider').select_option('rules');page.locator('#agent-query').fill('')
+            page.locator('#job-form button[type=submit]').click();expect(page.locator('#job-list option')).to_have_count(1)
+            page.locator('#job-start').click();expect(page.locator('#job-propose')).to_be_enabled()
+            page.locator('#job-propose').click();expect(page.locator('#proposal-text')).to_contain_text('Design job step');apply()
+            expect(page.locator('#job-list option')).to_contain_text('completed')
+            page.locator('details:has(#diagnostics-refresh) > summary').click();page.locator('#diagnostics-refresh').click()
+            expect(page.locator('#diagnostics-result')).to_contain_text('database schema 2')
             page.reload();expect(page.locator('#project-title')).to_have_text('Browser acceptance')
             expect(page.locator('#new-property')).to_be_enabled()
             assert library.get(project['id'])['scene']['references']==saved['scene']['references']
@@ -83,7 +114,7 @@ def main():
             if os.getenv('PALLADIO_SCREENSHOT'): page.screenshot(path=os.environ['PALLADIO_SCREENSHOT'],full_page=True)
             assert not errors,errors
             browser.close()
-            print('PASS: Chromium assembly resize, wood finish, terrain layer, OBJ placement, image normalization, vision proposal, Apply and reopen; no page errors')
+            print('PASS: Chromium terrain, assets, references, rooms, roof, planting, palettes, PNG/OBJ, saved view, model outline, job Apply, diagnostics and reopen; no page errors')
 
 
 if __name__=='__main__': main()

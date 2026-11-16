@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const nodes=new Map(),find=id=>{if(!nodes.has(id))nodes.set(id,{value:'',events:{},addEventListener(n,f){this.events[n]=f;},querySelectorAll(){return [];},replaceChildren(...items){this.value=items[0]?.value||'';}});return nodes.get(id);};
+const camera={target:[1,2,3],azimuth:.2,pitch:.5,distance:50};let commands,applied;
+const project={id:'p',revision:1,scene:{views:[{id:'v',name:'Approach',camera}]}},viewport={captureCamera:()=>camera,applyCamera:c=>applied=c};
+const hooks={state:()=>({project,viewport}),preview:c=>commands=c,invalidate(){},run:f=>f()};
+const ctx=vm.createContext({find,hooks,Option:function(text,value){this.text=text;this.value=value;}});vm.runInContext(fs.readFileSync('palladio/web/presentation.js','utf8').replace(/^import .*$/mg,'').replace('export class','class')+';const tools=new PresentationTools(find,hooks);tools.render();tools.sync();',ctx);
+find('view-name').value='New';find('view-save').events.click();assert.equal(commands[0].action,'view_save');assert.equal(commands[0].camera.distance,50);
+find('view-open').events.click();assert.equal(applied,camera);find('view-update').events.click();assert.equal(commands[0].id,'v');
+vm.runInContext(fs.readFileSync('palladio/web/viewport.js','utf8').replace(/^import .*$/mg,'').replace('export class','class'),ctx);
+vm.runInContext('const viewportTest=Object.create(Viewport.prototype);viewportTest.camera={target:[1,2,3],azimuth:.2,pitch:.5,distance:50};viewportTest.draw=()=>{};const shot=viewportTest.captureCamera();shot.target[0]=99;if(viewportTest.camera.target[0]!==1)throw Error("camera alias");viewportTest.applyCamera(shot);shot.target[0]=2;if(viewportTest.camera.target[0]!==99)throw Error("view alias");',ctx);
+console.log('PASS: saved view capture, replacement, recall and independent camera values');

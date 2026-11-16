@@ -55,6 +55,8 @@ def edit_terrain(scene, command, baseline):
         label='Added '+layers[-1]['name']
     elif action=='terrain_restore':
         scene.pop('terrain',None); scene.pop('terrain_layers',None)
+        from .planting import reanchor
+        reanchor(scene,baseline)
         return 'Restored original ground; architecture retained'
     else:
         layer=next((x for x in layers if x['id']==command.get('id')),None)
@@ -67,6 +69,8 @@ def edit_terrain(scene, command, baseline):
         else: raise ValidationError('Unknown terrain command.')
     scene['terrain']=rebuild(baseline,layers)
     scene['terrain_layers']=layers
+    from .planting import reanchor
+    reanchor(scene,baseline)
     return label
 
 

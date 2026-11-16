@@ -9,6 +9,10 @@ from urllib.parse import urlsplit
 import webbrowser
 
 from .assets import AssetStore
+from .jobs import DesignJobs
+from .diagnostics import health
+from .finishes import PRESETS
+from .transfer import snapshot, MAX_BYTES
 from .commands import preview_commands
 from .local_agent import AgentError, AgentService, OllamaPlanner
 from .assemblies import ASSEMBLIES, assembly_preview
@@ -26,14 +30,29 @@ STATIC = {
     "/mesh.js": ("mesh.js", "text/javascript"),
     "/assets.js": ("assets.js", "text/javascript"),
     "/references.js": ("references.js", "text/javascript"),
+    "/extensions.js": ("extensions.js", "text/javascript"),
+    "/transfer.js": ("transfer.js", "text/javascript"),
+    "/layout.js": ("layout.js", "text/javascript"),
+    "/roofs.js": ("roofs.js", "text/javascript"),
+    "/rooms.js": ("rooms.js", "text/javascript"),
+    "/diagnostics.js": ("diagnostics.js", "text/javascript"),
+    "/jobs.js": ("jobs.js", "text/javascript"),
+    "/presentation.js": ("presentation.js", "text/javascript"),
+    "/finishes.js": ("finishes.js", "text/javascript"),
+    "/planting.js": ("planting.js", "text/javascript"),
     "/tools.js": ("tools.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
 }
-PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
+PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(geometry-export|schedule|measure|export|duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
+
+
+JOB_ROUTE=re.compile(r"/api/properties/([a-f0-9-]{36})/jobs(?:/([a-f0-9-]{36}))?")
 
 
 def handler_for(library, agent=None, sites=None):
+    jobs=DesignJobs(library)
+    runtime=health(library)
     agent = agent or AgentService()
     assets = AssetStore(library.path.parent / (library.path.stem + "-assets"))
     sites = sites or SiteService(library.path.parent / (library.path.stem + "-sites"))
@@ -70,6 +89,9 @@ def handler_for(library, agent=None, sites=None):
                 filename, content_type = STATIC[path]
                 self.respond(200, content_type, (WEB / filename).read_bytes())
                 return
+            if path == '/api/health':
+                self.json_response(200,runtime)
+                return
             if path == '/api/assets':
                 self.json_response(200, assets.list())
                 return
@@ -81,27 +103,38 @@ def handler_for(library, agent=None, sites=None):
                 self.json_response(200, agent.describe())
                 return
             if path == "/api/catalog":
-                self.json_response(200, {"elements": ELEMENTS, "materials": MATERIALS, "weather": WEATHER, "assemblies": ASSEMBLIES})
+                self.json_response(200, {"elements": ELEMENTS, "materials": MATERIALS, "weather": WEATHER, "assemblies": ASSEMBLIES, "finishes": PRESETS})
                 return
             if path == "/api/properties":
                 self.json_response(200, library.list())
                 return
+            job_match=JOB_ROUTE.fullmatch(path)
+            if job_match:
+                try:self.json_response(200,jobs.get(job_match[1],job_match[2]) if job_match[2] else jobs.list(job_match[1]))
+                except MissingProject as error:self.json_response(404,{'error':str(error)})
+                return
             match = PROPERTY_ROUTE.fullmatch(path)
-            if match and match[2] in (None, "unreal"):
+            if match and match[2] in (None, "unreal", "export", "schedule"):
                 try:
                     project = library.get(match[1])
-                    self.json_response(200, unreal_view(project) if match[2] == "unreal" else project)
+                    if match[2]=='schedule':
+                        from .rooms import room_schedule
+                        self.json_response(200,{'revision':project['revision'],'buildings':[{'id':g['id'],'name':g['spec']['name'],'rooms':room_schedule(g['spec'])} for g in project['scene'].get('assemblies',[]) if g['spec']['kind']=='dwelling']})
+                        return
+                    self.json_response(200, snapshot(project) if match[2]=='export' else unreal_view(project) if match[2] == "unreal" else project)
+                except ValidationError as error:
+                    self.json_response(400, {'error':str(error)})
                 except MissingProject as error:
                     self.json_response(404, {"error": str(error)})
                 return
             self.json_response(404, {"error": "Route not found."})
 
-        def read_json(self):
+        def read_json(self, limit=1_000_000):
             if self.headers.get_content_type() != "application/json":
                 raise ValidationError("Send a JSON request.")
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                if not 0 < size <= 1_000_000:
+                if not 0 < size <= limit:
                     raise ValidationError("Request size is invalid.")
                 payload = json.loads(self.rfile.read(size))
             except (json.JSONDecodeError, UnicodeError, ValueError, RecursionError) as error:
@@ -119,10 +152,16 @@ def handler_for(library, agent=None, sites=None):
                 return
             path = urlsplit(self.path).path
             try:
-                data = self.read_json()
+                data = self.read_json(MAX_BYTES+1000 if path=='/api/properties/import' else 1_000_000)
+                if path=='/api/properties/import':
+                    self.json_response(201,library.import_snapshot(data.get('packet'),data.get('name')))
+                    return
                 if path == '/api/assets/import':
                     item = assets.import_data(data.get('name'), data.get('format'), data.get('data'), data.get('units', 'm'))
                     self.json_response(201, {k:v for k,v in item.items() if k!='mesh'})
+                    return
+                if path == '/api/agent/job-outline':
+                    self.json_response(200,agent.outline(data.get('brief'),data.get('model')))
                     return
                 if path == "/api/agent/models":
                     self.json_response(200, agent.models())
@@ -148,6 +187,14 @@ def handler_for(library, agent=None, sites=None):
                     )
                     self.json_response(201, result)
                     return
+                job_match=JOB_ROUTE.fullmatch(path)
+                if job_match:
+                    action=data.get('action')
+                    if job_match[2] and action=='propose':result=jobs.propose(job_match[1],job_match[2],data,agent)
+                    elif job_match[2] and action in ('review','apply','discard'):result=getattr(jobs,action)(job_match[1],job_match[2],data)
+                    else:result=jobs.change(job_match[1],job_match[2],data) if job_match[2] else jobs.create(job_match[1],data)
+                    self.json_response(200 if job_match[2] else 201,result)
+                    return
                 match = PROPERTY_ROUTE.fullmatch(path)
                 if match and match[2] == "duplicate":
                     self.json_response(201, library.duplicate(match[1], data.get("name")))
@@ -169,6 +216,16 @@ def handler_for(library, agent=None, sites=None):
                     project = library.get(match[1])
                     plan = preview_commands(project, data.get('revision'), data.get('commands'))
                     self.json_response(200, plan)
+                elif match and match[2]=='geometry-export':
+                    from .presentation import scene_obj
+                    project=library.get(match[1])
+                    if type(data.get('revision')) is not int or data['revision']!=project['revision']:raise RevisionConflict('Reload before exporting geometry.')
+                    self.json_response(200,scene_obj(project,data.get('terrain',True)))
+                elif match and match[2]=='measure':
+                    from .layout import measure
+                    project=library.get(match[1])
+                    if type(data.get('revision')) is not int or data['revision']!=project['revision']: raise RevisionConflict('Reload before measuring this selection.')
+                    self.json_response(200,measure(project['scene'],data.get('ids')))
                 elif match and match[2] == "assembly-preview":
                     self.json_response(200, assembly_preview(library.get(match[1]), data.get("assembly")))
                 elif match and match[2] == "preview":
