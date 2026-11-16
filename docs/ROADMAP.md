@@ -1,6 +1,6 @@
 # Palladio Studio build roadmap
 
-Updated 15 November 2026. PRs #14–#23 were verified merged into `main` at `8122b57`;
+Updated 16 November 2026. PRs #14–#23 were verified merged into `main` at `8122b57`;
 its tree matches the tested ten-PR stack. [STUDIO_NEXT.md](STUDIO_NEXT.md) records that
 completed series. [ARCHITECTURE_NEXT.md](ARCHITECTURE_NEXT.md) tracks the next five PRs.
 Merging does not establish workstation acceptance; the evidence below remains separate.
@@ -16,12 +16,22 @@ Merging does not establish workstation acceptance; the evidence below remains se
 | Design jobs | Durable briefs, local-model outline suggestions, pause/resume, saved proposals, atomic reviewed step checkpoints | Longer context, broader tools, quality evaluation, native job UI; no unattended execution yet |
 | Windows delivery | Fresh-terminal launcher, UE 5.7 discovery, pre-migration backup, build/library diagnostics and local acceptance reports | Workstation acceptance and packaged distribution |
 
-Current local evidence: **100 Python tests and 14 Node suites passed**, with syntax and diff
-checks. Python uses real loopback HTTP and fake model responses; Node uses DOM doubles and
-geometry comparisons. PowerShell execution, UE compilation/visuals/collision, rendered
-browser acceptance and real local-model quality/latency/VRAM are still outstanding. The
-optional browser workflow is supplied; this environment previously blocked Chromium startup.
-Hosted CI remains skipped. The sections below preserve earlier milestones and evidence.
+## Five-PR architecture stack above main
+
+The next five implementation branches are stacked in the order documented in
+[ARCHITECTURE_NEXT.md](ARCHITECTURE_NEXT.md). They add keyed wall openings and explicit wall
+conversion, terrain-fitted independent foundations, editable pool/pond geometry with non-solid
+water and capacity schedules, shared browser/Unreal saved cameras, and new agent tools with
+request-scoped planning cancellation. A fresh acceptance property and Windows checker cover
+the combined stack; [the walkthrough](ARCHITECTURE_ACCEPTANCE.md) separates compilation from
+interactive outcomes. These changes are open for review, not merged into the verified main.
+
+Current local evidence at this stack tip: **125 Python tests and 18 Node suites passed**, with
+JavaScript/Python syntax and diff checks. Python uses real loopback HTTP and fake models;
+Node uses DOM doubles and geometry comparisons. PowerShell execution, UE compilation,
+rendering/collision, rendered browser acceptance and real-model quality/latency/VRAM remain
+outstanding. Optional Chromium acceptance is supplied; startup was previously blocked by
+this environment. Hosted CI remains skipped. Historical counts below describe earlier stages.
 
 ## Four-PR stack above PR #8
 
@@ -225,7 +235,8 @@ measurements, automatic saves, native agent panel or autonomous long-job executi
 3. Exercise a real local model with brief decomposition, references, multi-step edits,
    pause/resume and stale proposals while Unreal is open. Record quality, latency and VRAM
    before selecting a default model or extending unattended execution.
-4. Build the next fidelity layer: arbitrary room/opening edits, structural supports, richer
-   terrain/water, asset streaming and PBR materials. Keep source versus inferred site data clear.
-5. Bring saved views and job review into the native experience, then package a Windows beta
+4. Build the next fidelity layer: arbitrary floor-plan drafting, joined roofs/walls, detailed
+   assets/PBR, terrain excavation and richer water/weather. Validate support and collision
+   feedback without implying structural capacity. Keep source versus inferred site data clear.
+5. Extend the native editing/job-review experience beyond shared saved cameras, then package a Windows beta
    with tested upgrade/backup recovery, performance budgets and recorded acceptance evidence.

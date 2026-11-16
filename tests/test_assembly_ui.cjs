@@ -55,5 +55,11 @@ node('design-view').events.click[0]();evaluate('showPlan(plan); showProject({...
  response=async()=>({ok:false,json:async()=>({error:'Reload stale property'})});
  node('apply-plan').events.click[0]();await new Promise(r=>setImmediate(r));
  assert.equal(evaluate('project.revision'),2);assert.equal(node('proposal').hidden,true);assert.match(node('status').textContent,/Reload stale/);
+ // Topology edits can replace the selected wall span; retain its group in the inspector.
+ evaluate('showProject({...fixture,scene:{...fixture.scene,assemblies:[{id:"wall",members:{span:"saved"}}]}});select("saved");');
+ evaluate('showProject({...fixture,revision:3,scene:{...fixture.scene,elements:[{...fixture.scene.elements[0],id:"frame"}],assemblies:[{id:"wall",members:{frame:"frame"}}]}})');
+ assert.equal(evaluate('selected'),'frame');
+ evaluate('showProject({...fixture,revision:4,scene:{...fixture.scene,elements:[],assemblies:[]}})');assert.equal(evaluate('selected'),null);
+ console.log('PASS: topology selection continuity');
  console.log('PASS: preview immutability, discard, input/change invalidation, selection, baseline/property switching, repeated apply, busy controls, revision binding, stale apply');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -24,6 +24,7 @@ export class PresentationTools {
   chosen(){return this.hooks.state().project?.scene.views?.find(v=>v.id===this.find('view-list').value);}
   render(){
     const {project}=this.hooks.state(),key=[project?.id,project?.revision].join('|');if(key===this.key)return;this.key=key;
+    this.find('view-fov').value=this.hooks.state().viewport?.captureCamera?.().fov_degrees??45;
     const list=this.find('view-list'),previous=list.value,views=project?.scene.views||[];list.replaceChildren(...views.map(v=>new Option(v.name,v.id)));
     if(views.some(v=>v.id===previous))list.value=previous;
   }

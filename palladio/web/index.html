@@ -273,6 +273,7 @@
           <pre id="job-details" class="job-details"></pre>
           <p id="job-agent-status" class="muted" role="status">Uses the provider/model and context filter selected in the agent panel, plus any selected reference image. Each step requires review and Apply. No steps run unattended.</p>
           <button id="job-propose" type="button">Preview current step with agent</button>
+          <button id="job-stop" type="button" disabled>Stop planning</button>
           <button id="job-review" type="button">Review saved step proposal</button>
           <button id="job-start" type="button">Start job</button>
           <button id="job-pause" type="button">Pause job</button>
@@ -294,7 +295,7 @@
           <button id="view-png" type="button">Download viewport PNG</button>
           <label class="checkbox"><input id="view-terrain" type="checkbox" checked>Include terrain in OBJ</label>
           <button id="view-obj" type="button">Export saved geometry OBJ</button>
-          <p class="muted">OBJ contains placed geometry and optional terrain, in metres with Y up. Materials, source vegetation and water are omitted. PNG captures the current viewport, including any preview.</p>
+          <p class="muted">OBJ contains placed geometry, including basin water surfaces, and optional terrain, in metres with Y up. Material appearances, source vegetation and coastal water are omitted. PNG captures the current viewport, including any preview.</p>
           <p id="view-status" class="muted" role="status"></p>
         </details>
         <details id="palette-panel" class="stack">

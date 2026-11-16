@@ -198,7 +198,7 @@ def handler_for(library, agent=None, sites=None):
                 if job_match:
                     action=data.get('action')
                     if job_match[2] and action=='propose':result=jobs.propose(job_match[1],job_match[2],data,agent)
-                    elif job_match[2] and action in ('review','apply','discard'):result=getattr(jobs,action)(job_match[1],job_match[2],data)
+                    elif job_match[2] and action in ('review','apply','discard','stop_planning'):result=getattr(jobs,action)(job_match[1],job_match[2],data)
                     else:result=jobs.change(job_match[1],job_match[2],data) if job_match[2] else jobs.create(job_match[1],data)
                     self.json_response(200 if job_match[2] else 201,result)
                     return

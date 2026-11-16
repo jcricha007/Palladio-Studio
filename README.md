@@ -53,6 +53,8 @@ The launcher compiles the Unreal editor target and starts it in a game window. P
 | Tab | Select the next pavilion element |
 | Arrow keys | Move the selected element 0.5 m along the property axes and save a revision |
 | B | Toggle the original site and the current design |
+| V / Shift+V | Recall the next/previous saved browser camera. |
+| K | Save the current downward-looking orbit camera as a new shared view. |
 | R | Reload the latest saved revision |
 
 For a round-trip check, select an element, move it once, and verify the new position and revision in the browser after reopening the property. Close and relaunch Unreal with the same ID to check persistence there. If another client edits the property first, the server rejects the stale move. Press **R** to load the new revision before trying again.
@@ -66,15 +68,26 @@ For the Windows navigation check:
 
 The preview uses solid/per-face colours, coarse procedural wood finishes and simple sunlight and fog. Richer weather and a packaged Windows build are follow-up work.
 
+## Check the five-PR architecture stack
+
+From an isolated checkout of its reviewed commit, run `scripts/Check-PalladioArchitecture.ps1`
+with `-ExpectedHead` set to the full commit hash. It runs Python/Node checks and the UE 5.7
+build, then prepares a separate test property. Add `-Open` to launch the walkthrough on port
+8877; results and the fixture live under `%LOCALAPPDATA%\Palladio\checks`. Your working
+property library is not used. `-SkipUnreal` is an explicit browser-only alternative.
+See [the acceptance walkthrough](docs/ARCHITECTURE_ACCEPTANCE.md) for observations to record.
+
 ## Current scope
 
 This development stack adds portable property snapshots, layout sets, gable/hip/shed roofs,
 connected room grids, terrain-anchored planting, finish palettes, saved browser cameras,
 PNG/OBJ presentation export, persistent design jobs, and local-model outlines with reviewed
-step application. Each job Apply saves the scene and its checkpoint atomically; no next
+step application. The next five-PR stack adds keyed wall openings, fitted foundations,
+editable pool/pond geometry, shared native saved cameras and cancellable job planning.
+Each job Apply saves the scene and its checkpoint atomically; no next
 step runs unattended. The Unreal developer preview shares saved geometry and edits.
 
-See [the ten-PR series](docs/STUDIO_NEXT.md) for limits and merge order, and
+See [the five-PR series](docs/ARCHITECTURE_NEXT.md), [the merged ten-PR series](docs/STUDIO_NEXT.md) for limits and merge order, and
 [the roadmap](docs/ROADMAP.md) for merged versus stacked progress. PBR textures, arbitrary
 floor-plan editing, richer assets/weather, native job controls and packaged Windows delivery
 remain ahead. Merge status does not establish Windows or real-model acceptance.

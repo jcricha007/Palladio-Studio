@@ -6,11 +6,11 @@ are reported separately. Merge status is not evidence of native rendering or mod
 
 | Order | Package | Status |
 | --- | --- | --- |
-| 1 | Editable wall runs and multiple framed openings | Implemented in this increment |
-| 2 | Foundations fitted beneath raised structures | Implemented |
-| 3 | Pool and pond layouts with non-solid water | Implemented |
-| 4 | Shared saved views and native recall | Implemented |
-| 5 | Agent tools, cancellable job planning and acceptance scene | Next |
+| 1 | [#25](https://github.com/jcricha007/Palladio-Studio/pull/25) · Editable wall runs and multiple framed openings | Open |
+| 2 | [#26](https://github.com/jcricha007/Palladio-Studio/pull/26) · Foundations fitted beneath raised structures | Open |
+| 3 | [#27](https://github.com/jcricha007/Palladio-Studio/pull/27) · Pool and pond layouts with non-solid water | Open |
+| 4 | [#28](https://github.com/jcricha007/Palladio-Studio/pull/28) · Shared saved views and native recall | Open |
+| 5 | `palladio/architecture-agent-acceptance` · Agent tools, cancellable job planning and acceptance scene | Implemented at this stack tip |
 
 ## Wall runs and openings
 
@@ -66,3 +66,32 @@ maintains vertical FOV across window sizes using the camera's reference aspect r
 Pose, transfer, persistence and HTTP conflict tests run locally. Unreal compilation, actual
 framing after window resize and V/K interaction need Windows acceptance. Camera API reference:
 [Epic UCameraComponent](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/Camera/UCameraComponent?application_version=5.5).
+
+## Agent tools and repeatable acceptance
+
+The local planner can create keyed wall openings and pool/pond basins, edit/remove existing
+openings, set water levels and fit/refit independent foundations. Target IDs must be in its
+bounded context; manual validators still reject the whole proposal on any invalid command.
+The model cannot invent support offsets, detach walls implicitly or excavate terrain.
+
+Job **Stop planning** stays available while outline/step requests are busy. A step stop is
+bound to its request ID, starting version and pending step. It pauses and clears the proposal
+whether it arrives before inference or just after that response saves, and rejects a stop
+that would affect a later step/session. Browser request cancellation also ignores late
+responses from transports that do not honor abort. Outline stops preserve existing drafts.
+The model process may continue computing; no GPU/process termination is claimed. Failure
+to confirm a pause is explicit and requires refreshing jobs. Apply remains a separate action.
+
+`python -m palladio.acceptance --library NEW_PATH` creates a dedicated review property and
+refuses existing files. `scripts/Check-PalladioArchitecture.ps1` verifies the exact clean
+commit, runs local checks and the native build, seeds that property and optionally opens both
+viewers. See [ARCHITECTURE_ACCEPTANCE.md](ARCHITECTURE_ACCEPTANCE.md) for the walkthrough.
+Topology edits keep the edited group selected when a wall span is replaced. Camera controls
+stay aligned with reset/recalled views. These integration fixes are part of the final package.
+
+Final local evidence: **125 Python tests and 18 Node suites passed**, including real loopback
+HTTP with fake models, request-stop races, atomic tools, transfers, native payloads and fixture
+creation. JavaScript syntax, optional browser-script Python syntax and diff checks passed.
+The optional rendered smoke workflow now covers the new controls; it has not run here.
+PowerShell execution, native compilation/rendering/collision and real-model quality remain
+Windows acceptance work. Hosted CI is deliberately skipped.
