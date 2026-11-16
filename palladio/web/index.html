@@ -285,10 +285,12 @@
           <summary>Views and presentation</summary>
           <label>Saved view<select id="view-list"></select></label>
           <button id="view-open" type="button">Go to view</button>
+          <label>Vertical field of view (degrees)<input id="view-fov" type="number" min="15" max="100" step="1" value="45"></label>
           <label>View name<input id="view-name" value="Main view" maxlength="80"></label>
           <button id="view-save" type="button">Preview saving camera</button>
           <button id="view-update" type="button">Preview replacing camera</button>
           <button id="view-remove" type="button">Preview removing view</button>
+          <p class="muted">In Unreal: V / Shift+V recall saved views; K saves the current orbit camera. Reload here to see cameras saved in Unreal.</p>
           <button id="view-png" type="button">Download viewport PNG</button>
           <label class="checkbox"><input id="view-terrain" type="checkbox" checked>Include terrain in OBJ</label>
           <button id="view-obj" type="button">Export saved geometry OBJ</button>

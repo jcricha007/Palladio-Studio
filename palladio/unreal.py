@@ -4,6 +4,7 @@ from .scene import MATERIALS
 from .groups import owner
 from .geometry import surface_triangles
 from .landscape_tools import design_landscape
+from .presentation import camera_pose
 
 
 def unreal_vector(vector):
@@ -56,6 +57,10 @@ def unreal_view(project):
     return {
         "name": project["name"],
         "revision": project["revision"],
+        "views": [{"id":view["id"],"name":view["name"],
+                   "eye_cm":unreal_vector(pose['eye']),"target_cm":unreal_vector(pose['target']),
+                   "vertical_fov_degrees":pose['fov_degrees']}
+                  for view in project['scene'].get('views',[]) for pose in [camera_pose(view['camera'])]],
         "vertices_cm": vertices,
         "triangles": triangles,
         "baseline_vertices_cm": [[column * spacing - edge, row * spacing - edge,

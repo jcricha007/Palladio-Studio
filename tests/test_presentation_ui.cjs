@@ -9,3 +9,15 @@ find('view-open').events.click();assert.equal(applied,camera);find('view-update'
 vm.runInContext(fs.readFileSync('palladio/web/viewport.js','utf8').replace(/^import .*$/mg,'').replace('export class','class'),ctx);
 vm.runInContext('const viewportTest=Object.create(Viewport.prototype);viewportTest.camera={target:[1,2,3],azimuth:.2,pitch:.5,distance:50};viewportTest.draw=()=>{};const shot=viewportTest.captureCamera();shot.target[0]=99;if(viewportTest.camera.target[0]!==1)throw Error("camera alias");viewportTest.applyCamera(shot);shot.target[0]=2;if(viewportTest.camera.target[0]!==99)throw Error("view alias");',ctx);
 console.log('PASS: saved view capture, replacement, recall and independent camera values');
+vm.runInContext(`
+  viewportTest.setFieldOfView(60);
+  if(Math.abs(viewportTest.projectionScale()-Math.tan(Math.PI/6))>1e-12)throw Error('FOV projection');
+  const wide=viewportTest.captureCamera();if(wide.fov_degrees!==60)throw Error('FOV capture');
+  viewportTest.applyCamera({target:[0,0,0],azimuth:0,pitch:.5,distance:20});
+  if(Math.abs(viewportTest.projectionScale()-Math.tan(Math.PI/8))>1e-12)throw Error('legacy FOV');
+  let rejected=false;try{viewportTest.setFieldOfView(NaN);}catch{rejected=true;}if(!rejected)throw Error('invalid FOV');
+  viewportTest.setFieldOfView(90);viewportTest.reset();if(viewportTest.camera.fov_degrees)throw Error('reset FOV');
+`,ctx);
+assert.equal(find('view-fov').value,45);viewport.setFieldOfView=fov=>camera.fov_degrees=fov;
+find('view-fov').value='72';find('view-fov').events.change();assert.equal(camera.fov_degrees,72);
+console.log('PASS: shared vertical FOV controls, projection, legacy defaults and reset');

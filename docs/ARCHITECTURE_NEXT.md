@@ -9,7 +9,7 @@ are reported separately. Merge status is not evidence of native rendering or mod
 | 1 | Editable wall runs and multiple framed openings | Implemented in this increment |
 | 2 | Foundations fitted beneath raised structures | Implemented |
 | 3 | Pool and pond layouts with non-solid water | Implemented |
-| 4 | Shared saved views and native recall | Next |
+| 4 | Shared saved views and native recall | Implemented |
 | 5 | Agent tools, cancellable job planning and acceptance scene | Next |
 
 ## Wall runs and openings
@@ -51,3 +51,18 @@ rejected; detached non-solid water captures preserve their collision setting.
 Water is static opaque colour, without refraction, waves, fluid physics or swimming. Basins
 do not cut the terrain: raise them above it or edit terrain explicitly. Capacity is geometric,
 not surveyed storage or hydraulic analysis. Rendered/native collision acceptance is pending.
+
+## Shared saved views
+
+Saved orbit cameras now carry an optional vertical field of view (15–100 degrees; old views
+retain 45 degrees). Browser framing/picking and native payloads use the same pose, converting
+metres/Y-up to centimetres/Z-up. Unreal V/Shift+V cycles saved views, and K saves the current
+orbit as a new revisioned view. Fly/walk capture is rejected; switch to orbit and look downward
+toward its target. Browser reload exposes native saves. Stale saves never overwrite newer edits.
+Recall retains the orbit target across scene reloads; Tab or original-site mode resets it.
+Changing the camera after recall does not overwrite a saved view. The native camera explicitly
+maintains vertical FOV across window sizes using the camera's reference aspect ratio.
+
+Pose, transfer, persistence and HTTP conflict tests run locally. Unreal compilation, actual
+framing after window resize and V/K interaction need Windows acceptance. Camera API reference:
+[Epic UCameraComponent](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/Camera/UCameraComponent?application_version=5.5).

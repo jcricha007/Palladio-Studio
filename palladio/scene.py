@@ -161,7 +161,7 @@ def edit_scene(scene, command, baseline=None):
     if action in ('opening_set','opening_remove','wall_convert'):
         from .walls import edit_opening
         return edit_opening(scene,command,baseline)
-    if action in ('view_save','view_update','view_remove'):
+    if action in ('view_save','view_update','view_remove','view_capture'):
         from .presentation import edit_view
         return edit_view(scene,command)
     if action in ('finish_save','finish_apply','finish_remove'):

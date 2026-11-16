@@ -24,6 +24,8 @@ public:
 
     bool SetNavigation(EPalladioNavigation Next);
     void SetOrbitFocus(const FVector& Focus);
+    bool RecallSavedView(const FVector& Focus, const FVector& Eye, double VerticalFov);
+    bool CaptureOrbitView(FVector& Focus, FVector& Eye, double& VerticalFov) const;
     FString NavigationLabel() const;
 
 private:
@@ -36,4 +38,5 @@ private:
     EPalladioNavigation Navigation = EPalladioNavigation::Fly;
     FVector OrbitFocus = FVector::ZeroVector;
     double OrbitDistance = 2400.0;
+    double VerticalFieldOfView = 45.0;
 };
