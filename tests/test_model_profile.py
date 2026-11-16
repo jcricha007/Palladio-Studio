@@ -25,7 +25,7 @@ class ModelProfileTests(unittest.TestCase):
         payload = self.run_model({'thinking': {'values': ['low', 'medium', 'high']}})
         self.assertEqual(payload['think'], 'low')
         self.assertEqual(payload['options']['num_predict'], 4096)
-        self.assertEqual(payload['options']['num_ctx'], 16384)
+        self.assertEqual(payload['options']['num_ctx'], 32768)
         self.assertEqual(payload['keep_alive'], 0)
         self.assertIsInstance(payload['format'], dict)
 

@@ -42,7 +42,9 @@ still requires an explicit model selection. Preview, Apply, Discard and revision
 are unchanged. This text-only model cannot read reference images; leave **Use selected
 image** unchecked unless selecting a separately installed vision-capable model.
 
-Requests use 16,384 context tokens and unload the model after the reply (`keep_alive: 0`).
+Requests use 32,768 context tokens for the expanded design-tool grammar and scene context,
+and unload the model after the reply (`keep_alive: 0`). ID values stay in the constrained
+output grammar but are listed only once in the prompt context to reduce repetition.
 Models reporting a low reasoning level use it with a 4,096-token output budget, so
 reasoning does not consume the entire JSON budget. Older gpt-oss metadata is recognized
 by architecture. Model weights still occupy VRAM during inference, so pause heavy native
