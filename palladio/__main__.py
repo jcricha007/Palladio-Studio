@@ -46,6 +46,8 @@ STATIC = {
     "/tools.js": ("tools.js", "text/javascript"),
     "/studio.js": ("studio.js", "text/javascript"),
     "/viewport.js": ("viewport.js", "text/javascript"),
+    "/lighting.js": ("lighting.js", "text/javascript"),
+    "/workspace.js": ("workspace.js", "text/javascript"),
 }
 PROPERTY_ROUTE = re.compile(r"/api/properties/([a-f0-9-]{36})(?:/(water-schedule|geometry-export|schedule|measure|export|duplicate|edit|preview|command-preview|asset-capture|asset-preview|assembly-preview|unreal))?")
 

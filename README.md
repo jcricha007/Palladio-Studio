@@ -2,6 +2,10 @@
 
 Palladio Studio is a local-first architectural sandbox for creating and revisiting deeply detailed 3D properties. Each project contains one site and its buildings, interiors, landscaping, furnishings, materials, and atmosphere. The long-term application pairs a Windows Unreal Engine viewport with manual editing and a local design agent.
 
+## Local AI, cleaner workspace and lighting
+
+The new [local AI and rendering guide](docs/LOCAL_AI_AND_RENDERING.md) covers the five tool tabs, Focus view, Draft/Studio/Presentation lighting, and the explicit Windows `Start-PalladioAI.ps1` setup for `gpt-oss:20b`. Real model and native rendering acceptance remain required.
+
 ## Run the studio
 
 Use Python 3.11 or newer and a browser with WebGL. From a fresh PowerShell terminal on the existing Windows checkout:
@@ -66,7 +70,7 @@ For the Windows navigation check:
 3. Switch back to the design and fly over open ground by the pavilion entrance. Press **3**. Walk through the open entrance and into a wall to check that the wall stops movement. Walk outside onto sloping terrain, then press **1** to fly again.
 4. Move an element while orbiting it. The orbit should follow it after the save and the browser should show the new revision.
 
-The preview uses solid/per-face colours, coarse procedural wood finishes and simple sunlight and fog. Richer weather and a packaged Windows build are follow-up work.
+The native preview now requests Lumen GI/reflections, virtual shadows, volumetric fog and daylight exposure. Materials still use solid/per-face colours and coarse procedural finishes. Native compilation and visual acceptance of this lighting upgrade remain required; richer assets, physical glass and a packaged Windows build are follow-up work.
 
 ## Check the five-PR architecture stack
 
@@ -223,8 +227,9 @@ GeoTIFF import and inferred vegetation and surroundings are later steps.
 
 The **Agent** panel keeps **Built-in commands** available without any AI runtime. Choose
 **Local Ollama** to use a separately installed, running Ollama server on this computer.
-Palladio does not install Ollama, download models, send prompts to a hosted API, or store keys.
-Install a chat model yourself using [Ollama's documentation](https://docs.ollama.com/quickstart).
+The browser never installs models or sends prompts to a hosted API. The explicit Windows
+`Start-PalladioAI.ps1` launcher installs and checks the selected local model; alternatively
+install a chat model yourself using [Ollama's documentation](https://docs.ollama.com/quickstart).
 For a strict offline runtime, disable Ollama cloud features (`OLLAMA_NO_CLOUD=1`) and restart
 Ollama; see [Ollama's FAQ](https://docs.ollama.com/faq). Palladio additionally rejects cloud
 names/remote aliases and requires local weight metadata before sending scene context.
