@@ -39,6 +39,34 @@ class JobAgentTests(unittest.TestCase):
         with self.assertRaises(RevisionConflict):self.jobs.review(self.p['id'],self.job['id'],{'version':self.job['version'],'revision':2})
         self.p=self.library.get(self.p['id']);self.proposal();self.assertEqual(self.job['proposal']['revision'],2)
         discarded=self.jobs.discard(self.p['id'],self.job['id'],{'version':self.job['version']});self.assertNotIn('proposal',discarded)
+    def test_saved_review_refuses_changes_during_preview_replay(self):
+        from palladio.commands import preview_commands
+
+        for changed in ("job", "project"):
+            with self.subTest(changed=changed):
+                self.p=self.library.get(self.p['id'])
+                if self.job['status']=='paused':
+                    self.job=self.jobs.change(self.p['id'],self.job['id'],
+                        {'action':'resume','version':self.job['version']})
+                self.proposal()
+                args={'version':self.job['version'],'revision':self.p['revision']}
+
+                def replay(*values):
+                    plan=preview_commands(*values)
+                    if changed=="job":
+                        self.job=DesignJobs(Library(self.library.path)).change(self.p['id'],
+                            self.job['id'],{'action':'pause','version':args['version']})
+                    else:
+                        self.library.commit(self.p['id'],self.p['revision'],
+                            [{'action':'environment','environment':{'hour':10}}])
+                    return plan
+
+                with patch('palladio.commands.preview_commands',side_effect=replay):
+                    with self.assertRaises(RevisionConflict):
+                        self.jobs.review(self.p['id'],self.job['id'],args)
+                self.assertEqual(self.library.get(self.p['id'])['revision'],
+                                 args['revision']+(changed=="project"))
+
     def test_late_model_response_cannot_revive_paused_job(self):
         fixture=ModelServer();fixture.release=Event()
         with running_server(fixture.handler) as server,ThreadPoolExecutor(1) as pool:
