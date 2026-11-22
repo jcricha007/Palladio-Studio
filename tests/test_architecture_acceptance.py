@@ -62,7 +62,7 @@ class ArchitectureAcceptanceTests(unittest.TestCase):
         self.assertEqual(plan['scene']['terrain'],self.project['scene']['terrain'])
         with self.assertRaises(ValidationError):validated_plan(self.project,{'summary':'Bad support','commands':[
             {'action':'foundation_fit','id':host['id'],'foundation':{'support_offsets':[99]}}]},set(),{host['id']})
-    def test_ollama_protocol_receives_keyed_opening_and_new_tools(self):
+    def test_ollama_protocol_receives_only_tools_for_the_selected_wall(self):
         wall=self.groups['wall_run'];opening={**wall['spec']['openings'][1],'width':2.4};fixture=ModelServer()
         fixture.plan={'summary':'Widen only the selected wall window.','commands':[{'action':'opening_set','id':wall['id'],'opening':opening}]}
         with running_server(fixture.handler) as server:
@@ -71,5 +71,20 @@ class ArchitectureAcceptanceTests(unittest.TestCase):
         self.assertEqual(result['commands'],fixture.plan['commands'])
         body=next(body for path,body in fixture.calls if path=='/api/chat')
         actions=[item['properties']['action']['const'] for item in body['format']['properties']['commands']['items']['oneOf']]
-        self.assertIn('opening_set',actions);self.assertIn('foundation_refit',actions)
+        self.assertIn('opening_set',actions);self.assertNotIn('foundation_refit',actions)
+        self.assertEqual(self.library.get(self.project['id']),self.project)
+
+    def test_ollama_protocol_restricts_refit_to_the_in_context_foundation(self):
+        foundation=self.groups['foundation'];fixture=ModelServer()
+        fixture.plan={'summary':'Refit the selected supports.','commands':[
+            {'action':'foundation_refit','id':foundation['id'],'foundation':{}}]}
+        with running_server(fixture.handler) as server:
+            result=AgentService(OllamaPlanner(server.server_port)).preview(self.project,'Refit the selected foundation supports',
+                next(iter(foundation['members'].values())),provider='ollama',model='small:latest',
+                revision=self.project['revision'],query='')
+        self.assertEqual(result['commands'],fixture.plan['commands'])
+        body=next(body for path,body in fixture.calls if path=='/api/chat')
+        tools=[item['properties'] for item in body['format']['properties']['commands']['items']['oneOf']]
+        refit=next(tool for tool in tools if tool['action']['const']=='foundation_refit')
+        self.assertEqual(refit['id']['enum'],[foundation['id']])
         self.assertEqual(self.library.get(self.project['id']),self.project)
