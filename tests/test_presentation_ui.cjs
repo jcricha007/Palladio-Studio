@@ -1,9 +1,9 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const nodes=new Map(),find=id=>{if(!nodes.has(id))nodes.set(id,{value:'',events:{},addEventListener(n,f){this.events[n]=f;},querySelectorAll(){return [];},replaceChildren(...items){this.value=items[0]?.value||'';}});return nodes.get(id);};
-const camera={target:[1,2,3],azimuth:.2,pitch:.5,distance:50};let commands,applied;
+const camera={target:[1,2,3],azimuth:.2,pitch:.5,distance:50};let commands,applied,draft,downloaded,stateProject;
 const project={id:'p',revision:1,scene:{views:[{id:'v',name:'Approach',camera}]}},viewport={captureCamera:()=>camera,applyCamera:c=>applied=c};
-const hooks={state:()=>({project,viewport}),preview:c=>commands=c,invalidate(){},run:f=>f()};
-const ctx=vm.createContext({find,hooks,Option:function(text,value){this.text=text;this.value=value;}});vm.runInContext(fs.readFileSync('palladio/web/presentation.js','utf8').replace(/^import .*$/mg,'').replace('export class','class')+';const tools=new PresentationTools(find,hooks);tools.render();tools.sync();',ctx);
+stateProject=project;const hooks={state:()=>({project:stateProject,viewport,viewportDraft:draft}),preview:c=>commands=c,invalidate(){},run:f=>f()};
+const ctx=vm.createContext({find,hooks,download:(...args)=>downloaded=args,Option:function(text,value){this.text=text;this.value=value;}});vm.runInContext(fs.readFileSync('palladio/web/presentation.js','utf8').replace(/^import .*$/mg,'').replace('export class','class')+';const tools=new PresentationTools(find,hooks);tools.render();tools.sync();',ctx);
 find('view-name').value='New';find('view-save').events.click();assert.equal(commands[0].action,'view_save');assert.equal(commands[0].camera.distance,50);
 find('view-open').events.click();assert.equal(applied,camera);find('view-update').events.click();assert.equal(commands[0].id,'v');
 vm.runInContext(fs.readFileSync('palladio/web/viewport.js','utf8').replace(/^import .*$/mg,'').replace('export class','class'),ctx);
@@ -21,3 +21,32 @@ vm.runInContext(`
 assert.equal(find('view-fov').value,45);viewport.setFieldOfView=fov=>camera.fov_degrees=fov;
 find('view-fov').value='72';find('view-fov').events.change();assert.equal(camera.fov_degrees,72);
 console.log('PASS: shared vertical FOV controls, projection, legacy defaults and reset');
+
+(async()=>{
+  viewport.capturePng=async()=>({image:'pixels'});
+  await find('view-png').events.click();
+  assert.equal(downloaded[0],'palladio-r1.png');
+  assert.match(find('view-status').textContent,/saved design/);
+  draft={commands:[{action:'test'}],scene:{}};
+  vm.runInContext('tools.sync()',ctx);
+  assert.equal(find('view-png').textContent,'Download unsaved preview PNG');
+  await find('view-png').events.click();
+  assert.equal(downloaded[0],'palladio-unsaved-preview-from-r1.png');
+  assert.match(find('view-status').textContent,/unsaved preview/);
+  let complete;
+  viewport.capturePng=()=>new Promise(resolve=>{complete=resolve;});
+  downloaded=undefined;
+  const abandoned=find('view-png').events.click();
+  // Replacing the preview at the same saved revision is still a different image.
+  draft={...draft};
+  complete({image:'old pixels'});
+  await abandoned;
+  assert.equal(downloaded,undefined);
+  assert.match(find('view-status').textContent,/No image was downloaded/);
+  const switched=find('view-png').events.click();
+  stateProject={id:'other',revision:1,scene:[]};
+  complete({image:'prior property'});
+  await switched;
+  assert.equal(downloaded,undefined);
+  console.log('PASS: saved/preview PNG labels and late capture scope checks');
+})().catch(error=>{console.error(error);process.exitCode=1;});

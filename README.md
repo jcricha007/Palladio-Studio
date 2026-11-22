@@ -90,6 +90,10 @@ step application. The next five-PR stack adds keyed wall openings, fitted founda
 editable pool/pond geometry, shared native saved cameras and cancellable job planning.
 Each job Apply saves the scene and its checkpoint atomically; no next
 step runs unattended. The Unreal developer preview shares saved geometry and edits.
+Viewport PNG downloads distinguish an unsaved preview from a saved scene in the
+button label, filename, and status. If the property, revision, or preview changes
+while encoding, no stale image is downloaded. OBJ export remains revision-bound
+to the saved scene.
 
 See [the five-PR series](docs/ARCHITECTURE_NEXT.md), [the merged ten-PR series](docs/STUDIO_NEXT.md) for limits and merge order, and
 [the roadmap](docs/ROADMAP.md) for merged versus stacked progress. PBR textures, arbitrary
