@@ -7,6 +7,7 @@ from pathlib import Path
 import platform
 import sqlite3
 import subprocess
+from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 SCHEMA_VERSION=2
@@ -34,14 +35,29 @@ def library_info(path):
     return result
 
 
+def _snapshot_sqlite(path, target):
+    # backup() snapshots SQLite coherently even when the source uses a journal/WAL.
+    with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as source, \
+            closing(sqlite3.connect(target)) as destination:
+        source.backup(destination)
+
+
 def backup_library(path):
     path=Path(path).resolve()
     if not path.is_file():raise FileNotFoundError('No saved library exists to back up.')
     directory=path.parent/'backups';directory.mkdir(parents=True,exist_ok=True)
     stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     target=directory/(path.stem+'-'+stamp+'-'+uuid4().hex[:8]+'.sqlite3')
-    # backup() snapshots SQLite coherently even when the source uses a journal/WAL.
-    with closing(sqlite3.connect(path.as_uri()+'?mode=ro',uri=True)) as source,closing(sqlite3.connect(target)) as destination:source.backup(destination)
+    # Only complete, checked copies appear as SQLite backups. Staging on the
+    # same filesystem keeps the final rename atomic; close SQLite first on Windows.
+    with TemporaryDirectory(prefix='.palladio-backup-', dir=directory) as folder:
+        staged = Path(folder) / 'library.sqlite3'
+        staged.touch(mode=0o600, exist_ok=False)
+        _snapshot_sqlite(path, staged)
+        with closing(sqlite3.connect(staged.as_uri() + '?mode=ro', uri=True)) as copy:
+            if copy.execute('PRAGMA quick_check').fetchall() != [('ok',)]:
+                raise sqlite3.DatabaseError('Backup SQLite integrity check failed.')
+        staged.replace(target)
     return target
 
 

@@ -6,6 +6,7 @@ import sqlite3
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 from palladio.diagnostics import backup_library,library_info
 from palladio.store import Library
 from palladio.jobs import DesignJobs
@@ -30,6 +31,33 @@ class DiagnosticTests(unittest.TestCase):
         result=json.loads(subprocess.check_output([sys.executable,'-m','palladio.diagnostics','--library',str(self.path),'--backup-before-upgrade'],text=True))
         self.assertEqual(library_info(result['backup'])['schema'],1);self.assertEqual(library_info(self.path)['schema'],1)
         migrated=Library(self.path);self.assertEqual(migrated.get(project['id'])['revision'],2);self.assertEqual(library_info(result['backup'])['schema'],1)
+    def test_incomplete_backup_does_not_publish_or_damage_existing_copy(self):
+        library = Library(self.path)
+        project = library.create('Recoverable', 'meadow')
+        previous = backup_library(self.path)
+        original = previous.read_bytes()
+
+        def failed(source, stage):
+            self.assertEqual(source, self.path)
+            stage.write_bytes(b'partial copy')
+            raise OSError('Simulated disk write failure.')
+
+        with patch('palladio.diagnostics._snapshot_sqlite', failed):
+            with self.assertRaisesRegex(OSError, 'Simulated disk write failure'):
+                backup_library(self.path)
+        self.assertEqual(list(previous.parent.iterdir()), [previous])
+        self.assertEqual(previous.read_bytes(), original)
+        self.assertEqual(library.get(project['id']), project)
+
+    def test_unreadable_backup_does_not_publish(self):
+        Library(self.path)
+        def corrupt(_source, stage):
+            stage.write_bytes(b'not a database' * 1024)
+        with patch('palladio.diagnostics._snapshot_sqlite', corrupt):
+            with self.assertRaises(sqlite3.DatabaseError):
+                backup_library(self.path)
+        self.assertEqual(list((self.path.parent / 'backups').iterdir()), [])
+
     def test_health_identifies_checkout_library_and_serves_all_registered_modules(self):
         library=Library(self.path)
         with running_server(handler_for(library)) as server:

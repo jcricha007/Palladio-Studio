@@ -110,9 +110,13 @@ installed. These optional checks are reported separately; no downloads or hosted
 started. `-ExpectedHead` rejects accidentally testing a different commit.
 
 Use **Studio diagnostics → Check running studio** to verify the active build and library.
-`py -m palladio.diagnostics --backup` creates a consistent database backup from the checkout;
-pass `--library PATH` for another library. The database migrates to schema 2 for design jobs.
-Snapshots/duplicates carry the saved design, not job progress or earlier history.
+`py -m palladio.diagnostics --library PATH --backup` makes a checked SQLite
+backup of the active library, including revision history and design jobs. Use
+the database path shown in Studio Diagnostics (or the launcher's Library line).
+This copies the database only; reusable assets and the elevation cache are
+separate sibling directories. Backups appear only after the copy passes its
+integrity check. Transfer snapshots and duplicates carry the saved design, not
+design-job progress or earlier revisions.
 
 | Path | Responsibility |
 | --- | --- |
