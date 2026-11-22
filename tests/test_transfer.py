@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from urllib.error import HTTPError
 from urllib.request import Request,urlopen
 from palladio.__main__ import handler_for
 from palladio.store import Library
@@ -41,6 +42,19 @@ class TransferTests(unittest.TestCase):
             packet=deepcopy(original);mutate(packet);packet['sha256']=hashlib.sha256(canonical(packet['payload'])).hexdigest()
             with self.assertRaises(ValidationError): self.library.import_snapshot(packet)
         self.assertEqual(len(self.library.list()),1)
+    def test_incomplete_environment_never_imports_even_with_matching_checksum(self):
+        packet = snapshot(self.p)
+        for part in ('baseline', 'scene'):
+            for field in ('weather', 'hour'):
+                with self.subTest(part=part, field=field):
+                    incomplete = deepcopy(packet)
+                    del incomplete['payload'][part]['environment'][field]
+                    incomplete['sha256'] = hashlib.sha256(canonical(incomplete['payload'])).hexdigest()
+                    with self.assertRaisesRegex(ValidationError, 'no property was imported'):
+                        self.library.import_snapshot(incomplete)
+        self.assertEqual(len(self.library.list()), 1)
+        self.assertEqual(self.library.get(self.p['id']), self.p)
+
     def test_old_ungrouped_property_and_embedded_mesh_roundtrip(self):
         old=self.library.create('Old','wooded hillside',True)
         self.assertEqual(self.library.import_snapshot(snapshot(old))['scene'],old['scene'])
@@ -55,3 +69,16 @@ class TransferTests(unittest.TestCase):
             request=Request(root+'/api/properties/import',data=json.dumps({'packet':packet}).encode(),headers={'Content-Type':'application/json'})
             with urlopen(request) as response: imported=json.load(response)
             self.assertEqual(imported['scene'],self.p['scene']);self.assertNotEqual(imported['id'],self.p['id'])
+
+    def test_http_rejects_incomplete_environment_without_creating_property(self):
+        packet = snapshot(self.p)
+        del packet['payload']['scene']['environment']['hour']
+        packet['sha256'] = hashlib.sha256(canonical(packet['payload'])).hexdigest()
+        with running_server(handler_for(self.library)) as server:
+            root = f'http://127.0.0.1:{server.server_port}'
+            request = Request(root+'/api/properties/import', data=json.dumps({'packet':packet}).encode(),
+                              headers={'Content-Type':'application/json'})
+            with self.assertRaises(HTTPError) as error:
+                urlopen(request)
+            self.assertEqual(error.exception.code, 400)
+        self.assertEqual(len(self.library.list()), 1)

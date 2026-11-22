@@ -70,6 +70,9 @@ def validate(packet):
             from .placement import height_at
             height_at(terrain,tree['position'][0],tree['position'][2])
         for environment in (baseline['environment'],scene['environment']):
+            # A snapshot is a full scene, not a partial weather/time edit.
+            if not isinstance(environment, dict) or set(environment) != {'hour', 'weather'}:
+                raise ValueError()
             edit_scene({'environment':{'weather':'clear','hour':16}}, {'action':'environment','environment':environment})
         if not scene.keys() <= {'elements','environment','assemblies','terrain','terrain_layers','references','finishes','views'}: raise ValueError()
         view_ids=set();view_names=set()
