@@ -255,6 +255,38 @@ async function loadLibrary() {
   return projects;
 }
 
+function proposalFacts(savedScene, proposedScene) {
+  const previous = new Map((savedScene?.assemblies || []).map(item => [item.id, item.spec]));
+  const plantKinds = new Map([["pine", "Pine"], ["broadleaf", "Broadleaf"], ["hedge", "Hedge"]]);
+  const plants = new Map();
+  const facts = [];
+  const showDimension = (name, label, before, after) => {
+    if (Number.isFinite(before) && Number.isFinite(after) && before !== after)
+      facts.push(`${name} · ${label}: ${before} m → ${after} m`);
+  };
+  for (const {id, spec} of proposedScene?.assemblies || []) {
+    if (!spec) continue;
+    const before = previous.get(id);
+    if (spec.kind === "garage" || spec.kind === "room") {
+      if (before) {
+        showDimension(spec.name, "Configured window width", before.window_width, spec.window_width);
+        showDimension(spec.name, "Shell height", before.height, spec.height);
+      } else if (Number.isFinite(spec.height)) {
+        facts.push(`${spec.name} · New shell height: ${spec.height} m`);
+      }
+    }
+    if (!previous.has(id) && plantKinds.has(spec.kind) && Number.isFinite(spec.height)) {
+      const group = plants.get(spec.kind) || [];
+      group.push(`${spec.name} (${spec.height} m)`);
+      plants.set(spec.kind, group);
+    }
+  }
+  for (const [kind, group] of plants) {
+    facts.push(`${plantKinds.get(kind)} added (${group.length}): ${group.join(", ")}`);
+  }
+  return facts;
+}
+
 function showPlan(plan = null) {
   pending = plan;
   $("proposal").hidden = !plan;
@@ -265,6 +297,15 @@ function showPlan(plan = null) {
   $("proposal-commands-detail").open = false;
   $("proposal-commands").textContent = plan ? JSON.stringify(plan.commands || (plan.command ? [plan.command] : []),
     (key,value)=>key==='image' && typeof value==='string'?'[local reference image; bytes omitted from this display]':value,2) : "";
+  const facts = project && plan?.revision === project.revision
+    ? proposalFacts(project.scene, plan.scene) : [];
+  $("proposal-facts").hidden = !facts.length;
+  $("proposal-facts-list").replaceChildren();
+  for (const fact of facts) {
+    const item = document.createElement("li");
+    item.textContent = fact;
+    $("proposal-facts-list").append(item);
+  }
   $("proposal-changes").replaceChildren();
   for (const change of [...(plan?.changes || []), ...(plan?.warnings || []),
     ...(plan?.reference_names?.length ? ['Reference images: '+plan.reference_names.join(', ')]:[])]) {

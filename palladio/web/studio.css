@@ -114,7 +114,8 @@ dialog h1 { margin-bottom: .4rem; font-family: "Instrument Serif", Georgia, seri
 .proposal { align-items: start; flex-wrap: wrap; }
 .proposal-detail { flex: 1 1 15rem; min-width: 0; overflow-wrap: anywhere; }
 #proposal-source { margin-bottom: .3rem; }
-#proposal-changes { margin: .5rem 0 0; padding-left: 1.2rem; max-height: 8rem; overflow-y: auto; }
+#proposal-facts { margin-top: .5rem; }
+#proposal-facts-list, #proposal-changes { margin: .5rem 0 0; padding-left: 1.2rem; max-height: 8rem; overflow-y: auto; }
 #proposal-changes:empty { display: none; }
 @media (max-width: 440px) {
   #prompt-form .input-row { flex-wrap: wrap; }

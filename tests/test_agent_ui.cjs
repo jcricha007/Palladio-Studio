@@ -97,6 +97,29 @@ function reset() {
   emit('discard-plan');assert.equal(node('proposal').hidden,true);assert.equal(updates.at(-1)[0],fixture);
   assert.equal(node('proposal-commands').textContent,'');assert.equal(node('proposal-commands-detail').open,false);
 
+  // Validated scene data, not model prose or a raw command, drives review facts.
+  const beforeAssemblies=[{id:'garage',members:{},spec:{kind:'garage',name:'Workshop',window_width:2,height:3.2}},
+    {id:'existing-tree',members:{},spec:{kind:'pine',name:'Existing pine',height:7}}];
+  const afterAssemblies=[{id:'garage',members:{},spec:{kind:'garage',name:'Workshop',window_width:2.4,height:3.2}},
+    {id:'new-garage',spec:{kind:'garage',name:'New garage',height:3.2}},beforeAssemblies[1],
+    ...[1,2,3,4].map(n=>({id:'new-tree-'+n,spec:{kind:'pine',name:'Courtyard pine '+n,height:7}}))];
+  context.factBase={...fixture,scene:{...fixture.scene,assemblies:beforeAssemblies}};
+  context.factPlan={...context.plan,summary:'Four 5 m trees and a 3 m garage.',
+    scene:{...context.plan.scene,assemblies:afterAssemblies}};
+  evaluate('showProject(factBase,true); showPlan(factPlan)');
+  assert.equal(node('proposal-facts').hidden,false);
+  assert.deepEqual(node('proposal-facts-list').children.map(n=>n.textContent),[
+    'Workshop · Configured window width: 2 m → 2.4 m',
+    'New garage · New shell height: 3.2 m',
+    'Pine added (4): Courtyard pine 1 (7 m), Courtyard pine 2 (7 m), Courtyard pine 3 (7 m), Courtyard pine 4 (7 m)']);
+  assert.equal(node('proposal-text').textContent,'Four 5 m trees and a 3 m garage.');
+  assert.equal(beforeAssemblies[0].spec.window_width,2);
+  emit('discard-plan');
+  assert.equal(node('proposal-facts').hidden,true);
+  assert.equal(node('proposal-facts-list').children.length,0);
+  evaluate('showPlan({...factPlan,revision:2})');
+  assert.equal(node('proposal-facts').hidden,true,'Do not compare a proposal to a different saved revision.');
+
   // Late replies after cancel, model/prompt/property/selection/view changes are ignored.
   for(const cancel of [
     ()=>emit('cancel-request'),
