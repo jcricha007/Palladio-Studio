@@ -127,13 +127,26 @@ class DesignJobs:
     def review(self,project_id,job_id,data):
         from .commands import preview_commands
         with self.library.connect() as connection:
+            # A review needs the versioned job and property from one SQLite snapshot.
+            connection.execute("BEGIN")
             job=self.read(connection,project_id,job_id);self.check_version(job,data.get('version'))
             proposal=job.get('proposal')
             if job['status']!='active' or not proposal:raise ValidationError('Preview the current step first.')
             project=self.library._read(connection,project_id)
             if type(data.get('revision')) is not int or data['revision']!=project['revision']:raise RevisionConflict('Reload before reviewing a saved proposal.')
-            plan=preview_commands(project,proposal['revision'],proposal['commands'])
-            return {'job':job,'plan':{**proposal,'scene':plan['scene'],'changes':plan['changes'],'warnings':plan['warnings'],'job':{'id':job_id,'version':job['version']}}}
+        # Preview generation can be expensive. Keep the database available to other
+        # sessions; suppress the result if another request changed either input.
+        plan=preview_commands(project,proposal['revision'],proposal['commands'])
+        with self.library.connect() as connection:
+            connection.execute("BEGIN")
+            latest=self.read(connection,project_id,job_id)
+            self.check_version(latest,job['version'])
+            latest_revision=connection.execute(
+                "SELECT revision FROM properties WHERE id=?", (project_id,)
+            ).fetchone()
+            if latest_revision is None or latest_revision['revision']!=project['revision']:
+                raise RevisionConflict('The property changed while reviewing this proposal. Reload before continuing.')
+        return {'job':job,'plan':{**proposal,'scene':plan['scene'],'changes':plan['changes'],'warnings':plan['warnings'],'job':{'id':job_id,'version':job['version']}}}
 
     def apply(self,project_id,job_id,data):
         with self.library.connect(write=True) as connection:
