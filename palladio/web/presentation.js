@@ -14,7 +14,21 @@ export class PresentationTools {
     find('view-list').addEventListener('change',()=>{const view=this.chosen();if(view)find('view-name').value=view.name;hooks.invalidate();this.sync();});
     find('view-name').addEventListener('input',hooks.invalidate);
     find('view-png').addEventListener('click',()=>hooks.run(async()=>{
-      const {project,viewport}=hooks.state();const blob=await viewport.capturePng();download('palladio-r'+project.revision+'.png',blob,'image/png');
+      const {project,viewport,baselineView,viewportDraft}=hooks.state();
+      if(!project||!viewport||baselineView)return;
+      const {id,revision}=project;
+      const blob=await viewport.capturePng();
+      const current=hooks.state();
+      if(current.project?.id!==id || current.project.revision!==revision ||
+         current.viewport!==viewport || current.baselineView || current.viewportDraft!==viewportDraft){
+        find('view-status').textContent='The view changed during capture. No image was downloaded.';
+        return;
+      }
+      const prefix=viewportDraft?'palladio-unsaved-preview-from-r':'palladio-r';
+      download(prefix+revision+'.png',blob,'image/png');
+      find('view-status').textContent=viewportDraft
+        ?'Downloaded an unsaved preview from revision '+revision+'.'
+        :'Downloaded the saved design at revision '+revision+'.';
     }));
     find('view-obj').addEventListener('click',()=>hooks.run(async()=>{
       const {project}=hooks.state();const result=await hooks.api('/api/properties/'+project.id+'/geometry-export',{revision:project.revision,terrain:find('view-terrain').checked});
@@ -29,7 +43,8 @@ export class PresentationTools {
     if(views.some(v=>v.id===previous))list.value=previous;
   }
   sync(){
-    const {project,viewport,busy,baselineView}=this.hooks.state(),disabled=busy||!project||baselineView;
+    const {project,viewport,busy,baselineView,viewportDraft}=this.hooks.state(),disabled=busy||!project||baselineView;
+    this.find('view-png').textContent=viewportDraft?'Download unsaved preview PNG':'Download viewport PNG';
     for(const node of this.find('presentation-panel').querySelectorAll('input,select,button'))node.disabled=disabled;
     for(const id of ['view-save','view-png','view-fov'])this.find(id).disabled=disabled||!viewport;
     for(const id of ['view-update','view-open'])this.find(id).disabled=disabled||!viewport||!this.chosen();

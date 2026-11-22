@@ -29,7 +29,7 @@ const assetTools = new AssetTools($, {api,run,preview:previewTool,showPlan,state
 const referenceTools = new ReferenceTools($,{run,preview:previewTool,state:()=>({project}),invalidate:discardOnEdit});
 const extensions=new Extensions($,{api,run,preview:previewTool,showPlan,commit,select,
   open:showProject,reloadLibrary:loadLibrary,invalidate:discardOnEdit,
-  state:()=>({project,selected,baselineView,catalog,viewport,busy,provider:$("agent-provider").value,model:$("agent-model").value,query:$("agent-query").value,references:referenceTools.selected()})});
+  state:()=>({project,selected,baselineView,catalog,viewport,busy,viewportDraft:displayedDraft(),provider:$("agent-provider").value,model:$("agent-model").value,query:$("agent-query").value,references:referenceTools.selected()})});
 
 function agentStatus(message, error = false) {
   $("agent-status").textContent = message;
@@ -276,10 +276,15 @@ function showPlan(plan = null) {
   syncControls();
 }
 
+function displayedDraft() {
+  const hasEdits = pending && (pending.commands || [pending.command]).some(Boolean);
+  return !baselineView && hasEdits && (pending.scene || pending.elements) ? pending : null;
+}
+
 function updateViewport() {
-  const hasEdits = pending && (pending.commands || [pending.command]).filter(Boolean).length > 0;
-  const previewElements = !baselineView && hasEdits && pending?.elements;
-  const previewScene = !baselineView && hasEdits && pending?.scene;
+  const draft = displayedDraft();
+  const previewElements = draft?.elements;
+  const previewScene = draft?.scene;
   $("assembly-preview-badge").hidden = !previewElements && !previewScene;
   if (!project || !catalog) return;
   const viewProject = previewScene ? {...project, scene: previewScene} : previewElements ? {
